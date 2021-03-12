@@ -137,6 +137,9 @@ struct vos_agg_param {
 	daos_epoch_t		 ap_max_epoch;
 	/* EV tree: Merge window for evtree aggregation */
 	struct agg_merge_window	 ap_window;
+	bool			 ap_skip_akey;
+	bool			 ap_skip_dkey;
+	bool			 ap_skip_obj;
 };
 
 static inline void
@@ -180,7 +183,8 @@ agg_del_entry(daos_handle_t ih, struct umem_instance *umm,
 		rc = umem_tx_commit(umm);
 
 	if (rc) {
-		D_ERROR("Failed to delete entry: "DF_RC"\n", DP_RC(rc));
+		D_CDEBUG(rc == -DER_TX_BUSY, DB_TRACE, DLOG_ERR,
+			 "Failed to delete entry: "DF_RC"\n", DP_RC(rc));
 		return rc;
 	}
 
@@ -409,6 +413,16 @@ vos_agg_sv(daos_handle_t ih, vos_iter_entry_t *entry,
 
 delete:
 	rc = agg_del_entry(ih, agg_param->ap_umm, entry, acts);
+	if (rc == -DER_TX_BUSY) {
+		*acts |= VOS_ITER_CB_ABORT;
+		/** Must not aggregate anything above this
+		 *  entry to avoid orphaned tree assertion
+		 */
+		agg_param->ap_skip_akey = true;
+		agg_param->ap_skip_dkey = true;
+		agg_param->ap_skip_obj = true;
+		rc = 0;
+	}
 	if (rc) {
 		D_ERROR("Failed to delete SV entry: "DF_RC"\n", DP_RC(rc));
 	} else if (vos_iter_empty(ih) == 1 && agg_param->ap_discard) {
@@ -1768,8 +1782,9 @@ vos_agg_ev(daos_handle_t ih, vos_iter_entry_t *entry,
 
 	rc = join_merge_window(ih, mw, entry, acts);
 	if (rc)
-		D_ERROR("Join window "DF_EXT"/"DF_EXT" error: "DF_RC"\n",
-			DP_EXT(&mw->mw_ext), DP_EXT(&phy_ext), DP_RC(rc));
+		D_CDEBUG(rc == -DER_TX_BUSY, DB_TRACE, DLOG_ERR,
+			 "Join window "DF_EXT"/"DF_EXT" error: "DF_RC"\n",
+			 DP_EXT(&mw->mw_ext), DP_EXT(&phy_ext), DP_RC(rc));
 out:
 	if (rc)
 		close_merge_window(mw, rc);
@@ -1824,6 +1839,14 @@ vos_aggregate_pre_cb(daos_handle_t ih, vos_iter_entry_t *entry,
 			*acts |= VOS_ITER_CB_ABORT;
 			if (rc == -DER_CSUM)
 				agg_param->ap_csum_err = true;
+			if (rc == -DER_TX_BUSY) {
+				/** Must not aggregate anything above this
+				 *  entry to avoid orphaned tree assertion
+				 */
+				agg_param->ap_skip_akey = true;
+				agg_param->ap_skip_dkey = true;
+				agg_param->ap_skip_obj = true;
+			}
 			rc = 0;
 		}
 		break;
@@ -1876,10 +1899,22 @@ vos_aggregate_post_cb(daos_handle_t ih, vos_iter_entry_t *entry,
 
 	switch (type) {
 	case VOS_ITER_OBJ:
+		if (agg_param->ap_skip_obj) {
+			agg_param->ap_skip_obj = false;
+			break;
+		}
 		rc = oi_iter_aggregate(ih, agg_param->ap_discard);
 		break;
 	case VOS_ITER_DKEY:
+		if (agg_param->ap_skip_dkey) {
+			agg_param->ap_skip_dkey = false;
+			break;
+		}
 	case VOS_ITER_AKEY:
+		if (agg_param->ap_skip_akey) {
+			agg_param->ap_skip_akey = false;
+			break;
+		}
 		rc = vos_obj_iter_aggregate(ih, agg_param->ap_discard);
 		break;
 	case VOS_ITER_SINGLE:
@@ -1902,10 +1937,25 @@ vos_aggregate_post_cb(daos_handle_t ih, vos_iter_entry_t *entry,
 		 * -DER_TX_BUSY error indicates current ilog aggregation
 		 * aborted on hitting uncommitted entry, this should be a very
 		 * rare case, we'd suppress the error here to keep aggregation
-		 * moving forward.
+		 * moving forward.   We do, however, need to ensure we do not
+		 * aggregate anything in the parent path.  Otherwise, we could
+		 * orphan the current entry due to incarnation log semantics.
 		 */
-		if (rc == -DER_TX_BUSY)
+		if (rc == -DER_TX_BUSY) {
 			rc = 0;
+			switch (type) {
+			default:
+				D_ASSERTF(type == VOS_ITER_OBJ,
+					  "Invalid iter type\n");
+				break;
+			case VOS_ITER_AKEY:
+				agg_param->ap_skip_dkey = true;
+				/* fall through */
+			case VOS_ITER_DKEY:
+				agg_param->ap_skip_obj = true;
+				/* fall through */
+			}
+		}
 	}
 
 	return rc;
