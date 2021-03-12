@@ -542,6 +542,8 @@ dtx_ilog_rec_release(struct umem_instance *umm, struct vos_container *cont,
 	int			 rc;
 
 	ilog = umem_off2ptr(umm, umem_off2offset(rec));
+	D_DEBUG(DB_TRACE, "attempting %s lid=%d ilog=%p\n", abort ? "abort" : "commit",
+		DAE_LID(dae), ilog);
 
 	vos_ilog_desc_cbs_init(&cbs, vos_cont2hdl(cont));
 	rc = ilog_open(umm, ilog, &cbs, &loh);
@@ -551,6 +553,8 @@ dtx_ilog_rec_release(struct umem_instance *umm, struct vos_container *cont,
 	id.id_epoch = DAE_EPOCH(dae);
 	id.id_tx_id = DAE_LID(dae);
 
+	D_DEBUG(DB_TRACE, "%s lid=%d ilog=%p\n", abort ? "abort" : "commit",
+		id.id_tx_id, ilog);
 	if (abort)
 		rc = ilog_abort(loh, &id);
 	else
@@ -568,6 +572,9 @@ do_dtx_rec_release(struct umem_instance *umm, struct vos_container *cont,
 
 	if (umoff_is_null(rec))
 		return 0;
+
+	D_DEBUG(DB_TRACE, "lid=%d cont="DF_UUID" is freeing record of type %d\n",
+		DAE_LID(dae), DP_UUID(cont->vc_id), dtx_umoff_flag2type(rec));
 
 	switch (dtx_umoff_flag2type(rec)) {
 	case DTX_RT_ILOG: {
@@ -658,11 +665,16 @@ dtx_rec_release(struct vos_container *cont, struct vos_dtx_act_ent *dae,
 			return rc;
 	}
 
+	D_DEBUG(DB_TRACE, "lid=%d is freeing records\n", DAE_LID(dae));
+
 	if (dae->dae_records != NULL) {
 		D_ASSERT(DAE_REC_CNT(dae) > DTX_INLINE_REC_CNT);
 
 		for (i = DAE_REC_CNT(dae) - DTX_INLINE_REC_CNT - 1;
 		     i >= 0; i--) {
+			D_DEBUG(DB_TRACE, "lid=%d is freeing %d "DF_X64",%p\n",
+				DAE_LID(dae), i, dae->dae_records[i],
+				umem_off2ptr(umm, dae->dae_records[i]));
 			rc = do_dtx_rec_release(umm, cont, dae,
 						dae->dae_records[i], abort);
 			if (rc != 0)
@@ -676,6 +688,9 @@ dtx_rec_release(struct vos_container *cont, struct vos_dtx_act_ent *dae,
 		count = DAE_REC_CNT(dae);
 
 	for (i = count - 1; i >= 0; i--) {
+		D_DEBUG(DB_TRACE, "lid=%d is freeing inline %d "DF_X64",%p\n",
+			DAE_LID(dae), i, DAE_REC_INLINE(dae)[i],
+			umem_off2ptr(umm, DAE_REC_INLINE(dae)[i]));
 		rc = do_dtx_rec_release(umm, cont, dae, DAE_REC_INLINE(dae)[i],
 					abort);
 		if (rc != 0)
@@ -1091,7 +1106,12 @@ vos_dtx_alloc(struct vos_dtx_blob_df *dbd, struct dtx_handle *dth)
 		return rc;
 	}
 
+	D_ASSERT(dae->dae_pre == 0);
+	D_ASSERT(dae->dae_post == 0);
+
 	DAE_LID(dae) = idx + DTX_LID_RESERVED;
+	D_DEBUG(DB_TRACE, "allocated new lid=%d, cont="DF_UUID"\n",
+		DAE_LID(dae), DP_UUID(cont->vc_id));
 	DAE_XID(dae) = dth->dth_xid;
 	DAE_OID(dae) = dth->dth_leader_oid;
 	DAE_DKEY_HASH(dae) = dth->dth_dkey_hash;
@@ -1137,10 +1157,17 @@ vos_dtx_append(struct dtx_handle *dth, umem_off_t record, uint32_t type)
 {
 	struct vos_dtx_act_ent		*dae = dth->dth_ent;
 	umem_off_t			*rec;
+	struct vos_container		*cont;
 
 	D_ASSERT(dae != NULL);
 
+	cont = vos_hdl2cont(dth->dth_coh);
+
 	if (DAE_REC_CNT(dae) < DTX_INLINE_REC_CNT) {
+		D_DEBUG(DB_TRACE, "lid=%d cont="DF_UUID" grabbing inline record %d for "DF_X64
+			",%p\n", DAE_LID(dae), DP_UUID(cont->vc_id),
+			DAE_REC_CNT(dae), record,
+			umem_off2ptr(vos_cont2umm(cont), record));
 		rec = &DAE_REC_INLINE(dae)[DAE_REC_CNT(dae)];
 	} else {
 		if (DAE_REC_CNT(dae) >= dae->dae_rec_cap + DTX_INLINE_REC_CNT) {
@@ -1164,6 +1191,10 @@ vos_dtx_append(struct dtx_handle *dth, umem_off_t record, uint32_t type)
 			dae->dae_records = rec;
 			dae->dae_rec_cap = count;
 		}
+		D_DEBUG(DB_TRACE, "lid=%d grabbing allocated record %d for "
+			DF_X64",%p\n", DAE_LID(dae), DAE_REC_CNT(dae), record,
+			umem_off2ptr(vos_cont2umm(vos_hdl2cont(dth->dth_coh)),
+				     record));
 
 		rec = &dae->dae_records[DAE_REC_CNT(dae) - DTX_INLINE_REC_CNT];
 	}
@@ -2179,6 +2210,7 @@ vos_dtx_aggregate(daos_handle_t coh)
 	if (dbd == NULL || dbd->dbd_count == 0)
 		return 0;
 
+	D_DEBUG(DB_TRACE, "Aggregating LRU array\n");
 	/** Take the opportunity to free some memory if we can */
 	lrua_array_aggregate(cont->vc_dtx_array);
 
@@ -2341,6 +2373,8 @@ vos_dtx_act_reindex(struct vos_container *cont)
 			rc = lrua_allocx_inplace(cont->vc_dtx_array,
 					 dae_df->dae_lid - DTX_LID_RESERVED,
 					 dae_df->dae_epoch, &dae);
+			D_DEBUG(DB_TRACE, "Allocate in place lid=%d",
+				dae_df->dae_lid);
 			if (rc != 0) {
 				if (rc == -DER_NOMEM) {
 					D_ERROR("Not enough memory for DTX "

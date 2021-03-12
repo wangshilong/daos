@@ -285,13 +285,17 @@ vos_tx_end(struct vos_container *cont, struct dtx_handle *dth_in,
 	if (dtx_is_valid_handle(dth_in) && err == 0)
 		err = vos_dtx_prepared(dth);
 
+	D_DEBUG(DB_TRACE, "TX err is "DF_RC"\n", DP_RC(err));
 	if (err == 0)
 		rc = vos_tx_publish(dth, true);
+	D_DEBUG(DB_TRACE, "TX err is "DF_RC"\n", DP_RC(rc));
 
 	rc = umem_tx_end(vos_cont2umm(cont), rc);
+	D_DEBUG(DB_TRACE, "TX err is "DF_RC"\n", DP_RC(rc));
 
 cancel:
 	if (rc != 0) {
+		D_DEBUG(DB_TRACE, "TX FAILED with "DF_RC"\n", DP_RC(rc));
 		/* The transaction aborted or failed to commit. */
 		vos_tx_publish(dth, false);
 		if (dtx_is_valid_handle(dth_in))

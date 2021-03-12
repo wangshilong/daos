@@ -612,6 +612,138 @@ lru_array_multi_test_iter(void **state)
 	}
 }
 
+struct simple_struct {
+	int x;
+	int y;
+};
+
+static void
+simple_evict(void *payload, uint32_t idx, void *arg)
+{
+	struct simple_struct	*rec = payload;
+
+	assert_int_equal(rec->x, 10);
+	assert_int_equal(rec->y, 15);
+}
+
+static void
+simple_init(void *payload, uint32_t idx, void *arg)
+{
+	struct simple_struct	*rec = payload;
+
+	rec->x = 0;
+	rec->y = 0;
+}
+
+static const struct lru_callbacks simple_cbs = {
+	.lru_on_evict	= simple_evict,
+	.lru_on_init	= simple_init,
+	.lru_on_fini	= simple_init,
+};
+
+static int
+init_test_simple(void **state)
+{
+	struct lru_arg		*ts_arg;
+	int			 rc;
+
+	D_ALLOC_PTR(ts_arg);
+	if (ts_arg == NULL)
+		return 1;
+
+	rc = lrua_array_alloc(&ts_arg->array, NUM_INDEXES, LRU_ARRAY_NR,
+			      sizeof(struct simple_struct),
+			      LRU_FLAG_REUSE_UNIQUE, &simple_cbs, ts_arg);
+
+	*state = ts_arg;
+	return rc;
+}
+
+static int
+finalize_test_simple(void **state)
+{
+	struct lru_arg		*ts_arg = *state;
+
+	if (ts_arg == NULL)
+		return 0;
+
+	if (ts_arg->array == NULL)
+		return 0;
+
+	lrua_array_free(ts_arg->array);
+
+	D_FREE(ts_arg);
+
+	return 0;
+}
+
+static void
+lru_test_simple(void **state)
+{
+	struct lru_arg		*ts_arg = *state;
+	struct simple_struct	*entry;
+	int			 rc, i;
+	int			 j;
+	int			 to_remove;
+	int			 sticky;
+	int			 tmp;
+
+	for (j = 0; j < NUM_INDEXES; j++) {
+		sticky = j;
+		rc = lrua_alloc(ts_arg->array, &ts_arg->indexes[j].idx, &entry);
+		printf("allocated idx %d\n", ts_arg->indexes[j].idx);
+		fflush(stdout);
+		assert_rc_equal(rc, 0);
+		entry->x = 10;
+		entry->y = 15;
+		for (i = 0; i < NUM_INDEXES; i++) {
+			if (i == sticky)
+				continue;
+
+			rc = lrua_alloc(ts_arg->array, &ts_arg->indexes[i].idx,
+					&entry);
+			printf("allocated idx %d\n", ts_arg->indexes[i].idx);
+			fflush(stdout);
+			assert_rc_equal(rc, 0);
+			entry->x = 10;
+			entry->y = 15;
+			assert_int_not_equal(ts_arg->indexes[i].idx,
+					     &ts_arg->indexes[sticky].idx);
+			if (j % 10 == 0)
+				continue; /** no eviction occasionally */
+
+			if (i < 10)
+				continue;
+
+			to_remove = i - 10;
+
+			if (to_remove == sticky)
+				continue;
+
+			if ((i % 10) == 0) {
+				tmp = sticky;
+				sticky = to_remove;
+				to_remove = tmp;
+			}
+			/** Ok to evict entries not in the array */
+			lrua_evict(ts_arg->array,
+				   &ts_arg->indexes[to_remove].idx);
+			printf("evicted idx %d\n",
+			       ts_arg->indexes[to_remove].idx);
+			lrua_array_aggregate(ts_arg->array);
+		}
+
+		for (i = NUM_INDEXES - 1; i >= 0; i--) {
+			/** Ok to evict entries not in the array */
+			lrua_evict(ts_arg->array, &ts_arg->indexes[i].idx);
+			printf("evicted idx %d\n",
+			       ts_arg->indexes[i].idx);
+			if (i % 10 == 0)
+				lrua_array_aggregate(ts_arg->array);
+		}
+	}
+}
+
 static void
 inplace_test(struct lru_arg *ts_arg, uint32_t idx, uint64_t key1, uint64_t key2)
 {
@@ -772,7 +904,9 @@ static const struct CMUnitTest ts_tests[] = {
 		finalize_lru_test},
 	{ "VOS600.3: LRU multi-level array", lru_array_multi_test,
 		init_lru_multi_test, finalize_lru_test},
-	{ "VOS600.4: VOS timestamp allocation test", ilog_test_ts_get,
+	{ "VOS600.4: LRU simple multi-level", lru_test_simple,
+		init_test_simple, finalize_test_simple},
+	{ "VOS600.5: VOS timestamp allocation test", ilog_test_ts_get,
 		ts_test_init, ts_test_fini},
 };
 

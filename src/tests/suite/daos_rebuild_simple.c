@@ -853,7 +853,7 @@ rebuild_full_shards(void **state)
 	struct ioreq	req;
 	int		i;
 
-	skip(); /** DAOS-5758 */
+	//skip(); /** DAOS-5758 */
 
 	if (!test_runable(arg, 4))
 		return;

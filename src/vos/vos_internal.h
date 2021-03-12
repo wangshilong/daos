@@ -214,7 +214,9 @@ struct vos_container {
 	unsigned int		vc_open_count;
 };
 
+
 struct vos_dtx_act_ent {
+	uint64_t			 dae_pre;
 	struct vos_dtx_act_ent_df	 dae_base;
 	umem_off_t			 dae_df_off;
 	struct vos_dtx_blob_df		*dae_dbd;
@@ -248,6 +250,7 @@ struct vos_dtx_act_ent {
 					 dae_aborted:1,
 					 dae_maybe_shared:1,
 					 dae_prepared:1;
+	uint64_t			 dae_post;
 };
 
 #ifdef VOS_STANDALONE

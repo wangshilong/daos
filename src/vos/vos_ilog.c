@@ -68,7 +68,11 @@ static int
 vos_ilog_add(struct umem_instance *umm, umem_off_t ilog_off, uint32_t *tx_id,
 	     daos_epoch_t epoch, void *args)
 {
-	return vos_dtx_register_record(umm, ilog_off, DTX_RT_ILOG, tx_id);
+	int rc;
+	rc = vos_dtx_register_record(umm, ilog_off, DTX_RT_ILOG, tx_id);
+	D_DEBUG(DB_TRACE, "Registered ilog "DF_X64" %p lid=%d rc="DF_RC"\n",
+		ilog_off, umem_off2ptr(umm, ilog_off), *tx_id, DP_RC(rc));
+	return rc;
 }
 
 static int
@@ -81,6 +85,8 @@ vos_ilog_del(struct umem_instance *umm, umem_off_t ilog_off, uint32_t tx_id,
 		return 0;
 
 	coh.cookie = (unsigned long)args;
+	D_DEBUG(DB_TRACE, "Deregistered ilog "DF_X64" %p lid=%d\n",
+		ilog_off, umem_off2ptr(umm, ilog_off), tx_id);
 	vos_dtx_deregister_record(umm, coh, tx_id, epoch, ilog_off);
 	return 0;
 }

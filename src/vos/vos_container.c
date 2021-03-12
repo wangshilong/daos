@@ -382,7 +382,7 @@ vos_cont_open(daos_handle_t poh, uuid_t co_uuid, daos_handle_t *coh)
 	uma.uma_id = UMEM_CLASS_VMEM;
 
 	rc = lrua_array_alloc(&cont->vc_dtx_array, DTX_ARRAY_LEN, DTX_ARRAY_NR,
-			      sizeof(struct vos_dtx_act_ent),
+			      sizeof(struct vos_dtx_act_ent) + 128,
 			      LRU_FLAG_REUSE_UNIQUE,
 			      NULL, NULL);
 	if (rc != 0) {

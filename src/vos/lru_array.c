@@ -363,6 +363,7 @@ lrua_array_aggregate(struct lru_array *array)
 			continue; /** Used entries */
 		d_list_del(&sub->ls_link);
 		d_list_add_tail(&sub->ls_link, &array->la_unused_sub);
+		D_DEBUG(DB_TRACE, "Freeing some entries\n");
 		array_free_one(array, sub);
 	}
 }

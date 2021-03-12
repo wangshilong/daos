@@ -181,8 +181,8 @@ ilog_log_add(struct ilog_context *lctx, struct ilog_id *id)
 		return rc;
 	}
 
-	D_DEBUG(DB_TRACE, "Registered ilog="DF_X64" epoch="DF_X64" tx_id=%d\n",
-		lctx->ic_root_off, id->id_epoch, id->id_tx_id);
+	D_DEBUG(DB_TRACE, "Registered ilog="DF_X64",%p epoch="DF_X64" lid=%d\n",
+		lctx->ic_root_off, lctx->ic_root, id->id_epoch, id->id_tx_id);
 
 	return 0;
 }
@@ -205,9 +205,9 @@ ilog_log_del(struct ilog_context *lctx, const struct ilog_id *id,
 		return rc;
 	}
 
-	D_DEBUG(DB_TRACE, "%s ilog="DF_X64" epoch="DF_X64
-		" tx_id=%d\n", deregister ? "Deregistered" : "Removed",
-		lctx->ic_root_off, id->id_epoch, id->id_tx_id);
+	D_DEBUG(DB_TRACE, "%s ilog="DF_X64",%p epoch="DF_X64
+		" lid=%d\n", deregister ? "Deregistered" : "Removed",
+		lctx->ic_root_off, lctx->ic_root, id->id_epoch, id->id_tx_id);
 
 	return 0;
 }
@@ -489,13 +489,15 @@ ilog_create(struct umem_instance *umm, struct ilog_df *root)
 	return rc;
 }
 
-#define ILOG_ASSERT_VALID(root_df)				\
-	do {							\
-		struct ilog_root	*__root;		\
-								\
-		__root = (struct ilog_root *)(root_df);		\
-		D_ASSERT((__root != NULL) &&			\
-			 ILOG_MAGIC_VALID(__root->lr_magic));	\
+#define ILOG_ASSERT_VALID(root_df)					\
+	do {								\
+		struct ilog_root	*__root;			\
+									\
+		__root = (struct ilog_root *)(root_df);			\
+		D_ASSERTF((__root != NULL) &&				\
+			 ILOG_MAGIC_VALID(__root->lr_magic),		\
+			  "Invalid root %p %x\n", __root,		\
+			  __root == NULL ? 0 : __root->lr_magic);	\
 	} while (0)
 
 int
