@@ -31,6 +31,7 @@
 #include "daos_types.h"
 #include "daos_api.h"
 #include "daos_fs.h"
+#include "daos_fs_sys.h"
 #include "daos_uns.h"
 #include "daos_prop.h"
 
@@ -40,19 +41,12 @@
 #define MAX_FILENAME 256
 #define OID_ARR_SIZE 8
 
-struct fs_copy_dirent {
-	dfs_obj_t *dir;
-	struct dirent ents[NUM_DIRENTS];
-	daos_anchor_t anchor;
-	uint32_t num_ents;
-};
-
 struct file_dfs {
 	enum {POSIX, DAOS} type;
 	int fd;
 	daos_off_t offset;
 	dfs_obj_t *obj;
-	dfs_t *dfs;
+	dfs_sys_t *dfs_sys;
 };
 
 struct dm_args {
@@ -1802,26 +1796,18 @@ out:
 static ssize_t
 write_dfs(struct file_dfs *file_dfs, char *file, void *buf, ssize_t size)
 {
+	daos_size_t	got_size = size;
 	int		rc;
-	d_iov_t		iov;
-	d_sg_list_t	sgl;
 
-	sgl.sg_nr = 1;
-	sgl.sg_iovs = &iov;
-	sgl.sg_nr_out = 1;
-	d_iov_set(&iov, buf, size);
-	rc = dfs_write(file_dfs->dfs, file_dfs->obj, &sgl,
-		       file_dfs->offset, NULL);
-	if (rc) {
-		fprintf(stderr, "dfs_write %s failed (%d %s)\n",
-			file, rc, strerror(rc));
+	rc = dfs_sys_write(file_dfs->dfs_sys, file_dfs->obj, buf,
+			   file_dfs->offset, &got_size, NULL);
+	if (rc != 0) {
 		errno = rc;
-		size = -1;
 		D_GOTO(out, rc);
 	}
-	file_dfs->offset += (daos_off_t)size;
+	file_dfs->offset += (daos_off_t)got_size;
 out:
-	return (ssize_t)size;
+	return got_size;
 }
 
 static ssize_t
@@ -1843,43 +1829,6 @@ file_write(struct file_dfs *file_dfs, char *file,
 			file, file_dfs->type);
 	}
 	return num_bytes_written;
-}
-
-static int
-open_dfs(struct file_dfs *file_dfs, char *file, int flags, mode_t mode)
-{
-	int		rc = 0;
-	int		tmp_rc = 0;
-	dfs_obj_t	*parent = NULL;
-	char		*name = NULL;
-	char		*dir_name = NULL;
-
-	parse_filename_dfs(file, &name, &dir_name);
-	assert(dir_name);
-	rc = dfs_lookup(file_dfs->dfs, dir_name, O_RDWR, &parent, NULL, NULL);
-	if (parent == NULL) {
-		fprintf(stderr, "dfs_lookup %s failed with error %d\n",
-			dir_name, rc);
-		D_GOTO(out, rc = EINVAL);
-	}
-	rc = dfs_open(file_dfs->dfs, parent, name, mode | S_IFREG,
-		      flags, 0, 0, NULL, &file_dfs->obj);
-	if (rc != 0) {
-		fprintf(stderr, "dfs_open %s failed (%d)\n", name, rc);
-	}
-out:
-	if (parent != NULL) {
-		tmp_rc = dfs_release(parent);
-		if (tmp_rc && rc != 0) {
-			fprintf(stderr, "dfs_release %s failed with error %d\n",
-				dir_name, rc);
-		}
-	}
-	if (name != NULL)
-		D_FREE(name);
-	if (dir_name != NULL)
-		D_FREE(dir_name);
-	return rc;
 }
 
 int
@@ -1911,7 +1860,8 @@ file_open(struct file_dfs *file_dfs, char *file, int flags, ...)
 				file, file_dfs->fd);
 		}
 	} else if (file_dfs->type == DAOS) {
-		rc = open_dfs(file_dfs, file, flags, mode);
+		rc = dfs_sys_open(file_dfs->dfs_sys, file, mode, flags, 0, 0, NULL,
+				  &file_dfs->obj);
 		if (rc != 0) {
 			fprintf(stderr, "file_open failed on %s: %d\n",
 				file, rc);
@@ -1925,62 +1875,13 @@ file_open(struct file_dfs *file_dfs, char *file, int flags, ...)
 }
 
 static int
-mkdir_dfs(struct file_dfs *file_dfs, const char *path, mode_t *mode)
-{
-	int		rc = 0;
-	int		tmp_rc = 0;
-	dfs_obj_t	*parent = NULL;
-	char		*name = NULL;
-	char		*dname = NULL;
-
-	parse_filename_dfs(path, &name, &dname);
-	if (dname == NULL || name == NULL) {
-		fprintf(stderr, "parsing filename failed, %s\n", dname);
-		D_GOTO(out, rc = EINVAL);
-	}
-	/* if the "/" path is given to DAOS the dfs_mkdir fails with
-	 * INVALID argument, so skip creation of that in DAOS since
-	 * it always already exists. This happens when copying from
-	 * DAOS -> DAOS from the root, because the first source
-	 * directory is always "/"
-	 */
-	if (name && strcmp(name, "/") != 0) {
-		rc = dfs_lookup(file_dfs->dfs, dname,
-				O_RDWR, &parent, NULL, NULL);
-		if (parent == NULL) {
-			fprintf(stderr, "dfs_lookup %s failed\n", dname);
-			D_GOTO(out, rc = EINVAL);
-		}
-		rc = dfs_mkdir(file_dfs->dfs, parent, name, *mode, 0);
-		if (rc != 0) {
-			/* continue if directory exists, fail otherwise */
-			fprintf(stderr, "dfs_mkdir %s failed, %s\n",
-				name, strerror(rc));
-		}
-	}
-out:
-	if (parent != NULL) {
-		tmp_rc = dfs_release(parent);
-		if (tmp_rc && rc != 0) {
-			fprintf(stderr, "dfs_release %s failed with error %d\n",
-				dname, rc);
-		}
-	}
-	if (name != NULL)
-		D_FREE(name);
-	if (dname != NULL)
-		D_FREE(dname);
-	return rc;
-}
-
-static int
-file_mkdir(struct file_dfs *file_dfs, const char *dir, mode_t *mode)
+file_mkdir(struct file_dfs *file_dfs, const char *dir, mode_t mode)
 {
 	int rc = 0;
 
 	/* continue if directory already exists */
 	if (file_dfs->type == POSIX) {
-		rc = mkdir(dir, *mode);
+		rc = mkdir(dir, mode);
 		if (rc != 0) {
 			/* return error code for POSIX mkdir */
 			rc = errno;
@@ -1988,9 +1889,10 @@ file_mkdir(struct file_dfs *file_dfs, const char *dir, mode_t *mode)
 				dir, strerror(errno));
 		}
 	} else if (file_dfs->type == DAOS) {
-		rc = mkdir_dfs(file_dfs, dir, mode);
+		rc = dfs_sys_mkdir(file_dfs->dfs_sys, dir, mode, 0);
 		if (rc != 0) {
-			/* mkdir_dfs already prints error */
+			fprintf(stderr, "dfs_sys_mkdir %s failed, %s\n",
+				dir, strerror(rc));
 			D_GOTO(out, rc);
 		}
 	} else {
@@ -2006,20 +1908,14 @@ static DIR*
 opendir_dfs(struct file_dfs *file_dfs, const char *dir)
 {
 	int	rc = 0;
-	struct	fs_copy_dirent *dirp;
+	DIR	*dirp;
 
-	D_ALLOC_PTR(dirp);
-	if (dirp == NULL) {
-		errno = ENOMEM;
-		return NULL;
-	}
-	rc = dfs_lookup(file_dfs->dfs, dir, O_RDWR, &dirp->dir, NULL, NULL);
+	rc = dfs_sys_opendir(file_dfs->dfs_sys, dir, 0, &dirp);
 	if (rc != 0) {
-		fprintf(stderr, "dfs_lookup %s failed\n", dir);
+		fprintf(stderr, "dfs_sys_opendir %s failed\n", dir);
 		errno = rc;
-		D_FREE(dirp);
 	}
-	return (DIR *)dirp;
+	return dirp;
 }
 
 static DIR*
@@ -2039,36 +1935,19 @@ file_opendir(struct file_dfs *file_dfs, const char *dir)
 }
 
 static struct dirent*
-readdir_dfs(struct file_dfs *file_dfs, DIR *_dirp)
+readdir_dfs(struct file_dfs *file_dfs, DIR *dirp)
 {
-	int	rc = 0;
-	struct	fs_copy_dirent *dirp = (struct fs_copy_dirent *)_dirp;
+	int		rc = 0;
+	struct dirent	*dirent;
 
-	if (dirp->num_ents) {
-		goto ret;
+	rc = dfs_sys_readdir(file_dfs->dfs_sys, dirp, &dirent);
+	if (rc != 0) {
+		fprintf(stderr, "dfs_sys_readdir failed (%d %s)\n",
+			rc, strerror(rc));
+		errno = rc;
+		return NULL;
 	}
-	dirp->num_ents = NUM_DIRENTS;
-	while (!daos_anchor_is_eof(&dirp->anchor)) {
-		rc = dfs_readdir(file_dfs->dfs, dirp->dir,
-				 &dirp->anchor, &dirp->num_ents,
-				dirp->ents);
-		if (rc) {
-			fprintf(stderr, "dfs_readdir failed (%d %s)\n",
-				rc, strerror(rc));
-			dirp->num_ents = 0;
-			memset(&dirp->anchor, 0, sizeof(dirp->anchor));
-			errno = rc;
-			return NULL;
-		}
-		if (dirp->num_ents == 0) {
-			continue;
-		}
-		goto ret;
-	}
-	return NULL;
-ret:
-	dirp->num_ents--;
-	return &dirp->ents[dirp->num_ents];
+	return dirent;
 }
 
 static struct dirent*
@@ -2088,43 +1967,16 @@ file_readdir(struct file_dfs *file_dfs, DIR *dirp)
 }
 
 static int
-stat_dfs(struct file_dfs *file_dfs, const char *path, struct stat *buf)
+lstat_dfs(struct file_dfs *file_dfs, const char *path, struct stat *buf)
 {
 	int		rc = 0;
-	int		tmp_rc = 0;
-	dfs_obj_t	*parent = NULL;
-	char		*name = NULL;
-	char		*dir_name = NULL;
 
-	parse_filename_dfs(path, &name, &dir_name);
-	assert(dir_name);
-	/* Lookup the parent directory */
-	rc = dfs_lookup(file_dfs->dfs, dir_name, O_RDWR, &parent, NULL, NULL);
-	if (parent == NULL) {
-		fprintf(stderr, "dfs_lookup %s failed, %d\n", dir_name, rc);
+	rc = dfs_sys_stat(file_dfs->dfs_sys, path, buf, O_NOFOLLOW);
+	if (rc != 0) {
+		fprintf(stderr, "dfs_sys_stat %s failed (%d %s)\n",
+			path, rc, strerror(rc));
 		errno = rc;
-		D_GOTO(out, rc);
-	} else {
-		/* Stat the path */
-		rc = dfs_stat(file_dfs->dfs, parent, name, buf);
-		if (rc) {
-			fprintf(stderr, "dfs_stat %s failed (%d %s)\n",
-				name, rc, strerror(rc));
-			errno = rc;
-		}
 	}
-out:
-	if (parent != NULL) {
-		tmp_rc = dfs_release(parent);
-		if (tmp_rc && rc != 0) {
-			fprintf(stderr, "dfs_release %s failed with error %d\n",
-				dir_name, rc);
-		}
-	}
-	if (name != NULL)
-		D_FREE(name);
-	if (dir_name != NULL)
-		D_FREE(dir_name);
 	return rc;
 }
 
@@ -2142,7 +1994,7 @@ file_lstat(struct file_dfs *file_dfs, const char *path, struct stat *buf)
 			rc = errno;
 		}
 	} else if (file_dfs->type == DAOS) {
-		rc = stat_dfs(file_dfs, path, buf);
+		rc = lstat_dfs(file_dfs, path, buf);
 	} else {
 		fprintf(stderr, "File type not known, file=%s, type=%d\n",
 			path, file_dfs->type);
@@ -2156,31 +2008,21 @@ read_dfs(struct file_dfs *file_dfs,
 	 void *buf,
 	 size_t size)
 {
-	d_iov_t		iov;
-	d_sg_list_t	sgl;
-	daos_size_t	got_size;
+	int	rc;
 
-	d_iov_set(&iov, buf, size);
-	sgl.sg_nr = 1;
-	sgl.sg_iovs = &iov;
-	sgl.sg_nr_out = 1;
-
-	/* execute read operation */
-	d_iov_set(&iov, buf, size);
-	int rc = dfs_read(file_dfs->dfs, file_dfs->obj, &sgl,
-			  file_dfs->offset, &got_size, NULL);
-	if (rc) {
-		fprintf(stderr, "dfs_read %s failed (%d %s)\n",
+	rc = dfs_sys_read(file_dfs->dfs_sys, file_dfs->obj, buf,
+			  file_dfs->offset, &size, NULL);
+	if (rc != 0) {
+		fprintf(stderr, "dfs_sys_read %s failed (%d %s)\n",
 			file, rc, strerror(rc));
 		errno = rc;
-		got_size = -1;
 		D_GOTO(out, rc);
 	}
 
 	/* update file pointer with number of bytes read */
-	file_dfs->offset += (daos_off_t)got_size;
+	file_dfs->offset += (daos_off_t)size;
 out:
-	return (ssize_t)got_size;
+	return size;
 }
 
 static ssize_t
@@ -2202,21 +2044,6 @@ file_read(struct file_dfs *file_dfs, char *file,
 }
 
 static int
-closedir_dfs(DIR *_dirp)
-{
-	struct	fs_copy_dirent *dirp	= (struct fs_copy_dirent *)_dirp;
-	int	rc			= dfs_release(dirp->dir);
-
-	if (rc) {
-		fprintf(stderr, "dfs_release failed (%d %s)\n",
-			rc, strerror(rc));
-		rc = EINVAL;
-	}
-	D_FREE(dirp);
-	return rc;
-}
-
-static int
 file_closedir(struct file_dfs *file_dfs, DIR *dirp)
 {
 	int rc = 0;
@@ -2231,23 +2058,11 @@ file_closedir(struct file_dfs *file_dfs, DIR *dirp)
 		}
 	} else if (file_dfs->type == DAOS) {
 		/* dfs returns positive error code already */
-		rc = closedir_dfs(dirp);
+		rc = dfs_sys_closedir(dirp);
 	} else {
 		rc = EINVAL;
 		fprintf(stderr, "File type not known, type=%d\n",
 			file_dfs->type);
-	}
-	return rc;
-}
-
-static int
-close_dfs(struct file_dfs *file_dfs, const char *file)
-{
-	int rc = dfs_release(file_dfs->obj);
-
-	if (rc) {
-		fprintf(stderr, "dfs_close %s failed (%d %s)\n",
-			file, rc, strerror(rc));
 	}
 	return rc;
 }
@@ -2268,7 +2083,7 @@ file_close(struct file_dfs *file_dfs, const char *file)
 			rc = errno;
 		}
 	} else if (file_dfs->type == DAOS) {
-		rc = close_dfs(file_dfs, file);
+		rc = dfs_sys_close(file_dfs->obj);
 		if (rc == 0)
 			file_dfs->obj = NULL;
 	} else {
@@ -2283,38 +2098,14 @@ static int
 chmod_dfs(struct file_dfs *file_dfs, const char *file, mode_t mode)
 {
 	int		rc = 0;
-	int		tmp_rc = 0;
-	dfs_obj_t	*parent	= NULL;
-	char		*name = NULL;
-	char		*dir_name = NULL;
 
-	parse_filename_dfs(file, &name, &dir_name);
-	assert(dir_name);
-	/* Lookup the parent directory */
-	rc = dfs_lookup(file_dfs->dfs, dir_name, O_RDWR, &parent, NULL, NULL);
-	if (parent == NULL) {
-		fprintf(stderr, "dfs_lookup %s failed\n", dir_name);
+	rc = dfs_sys_chmod(file_dfs->dfs_sys, file, mode);
+	if (rc != 0) {
+		fprintf(stderr, "dfs_sys_chmod %s failed (%d %s)",
+			file, rc, strerror(rc));
 		errno = rc;
-		rc = EINVAL;
-	} else {
-		rc = dfs_chmod(file_dfs->dfs, parent, name, mode);
-		if (rc) {
-			fprintf(stderr, "dfs_chmod %s failed (%d %s)",
-				name, rc, strerror(rc));
-			errno = rc;
-		}
 	}
-	if (parent != NULL) {
-		tmp_rc = dfs_release(parent);
-		if (tmp_rc && rc != 0) {
-			fprintf(stderr, "dfs_release %s failed with error %d\n",
-				dir_name, rc);
-		}
-	}
-	if (name != NULL)
-		D_FREE(name);
-	if (dir_name != NULL)
-		D_FREE(dir_name);
+	
 	return rc;
 }
 
@@ -2375,10 +2166,6 @@ fs_copy(struct file_dfs *src_file_dfs,
 		D_GOTO(out, rc);
 	}
 
-	/* initialize DAOS anchor */
-	struct fs_copy_dirent *dirp = (struct fs_copy_dirent *)src_dir;
-
-	memset(&dirp->anchor, 0, sizeof(dirp->anchor));
 	while (1) {
 		struct dirent *entry;
 		const char *d_name;
@@ -2503,7 +2290,7 @@ fs_copy(struct file_dfs *src_file_dfs,
 				mode_t tmp_mode_dir = S_IRWXU;
 
 				rc = file_mkdir(dst_file_dfs, next_dpath,
-						&tmp_mode_dir);
+						tmp_mode_dir);
 				/* continue if directory already exists,
 				 * fail otherwise
 				 */
@@ -2669,8 +2456,9 @@ dm_connect(bool is_posix_copy,
 			D_GOTO(err_src_root, rc);
 		}
 		if (is_posix_copy) {
-			rc = dfs_mount(ca->src_poh, ca->src_coh, O_RDWR,
-				       &src_file_dfs->dfs);
+			rc = dfs_sys_mount(ca->src_poh, ca->src_coh, O_RDWR,
+					   DFS_SYS_NO_LOCK,
+					   &src_file_dfs->dfs_sys);
 			if (rc) {
 				fprintf(stderr, "dfs mount on source "
 					"failed: %d\n", rc);
@@ -2808,8 +2596,9 @@ dm_connect(bool is_posix_copy,
 
 		}
 		if (is_posix_copy) {
-			rc = dfs_mount(ca->dst_poh, ca->dst_coh, O_RDWR,
-				       &dst_file_dfs->dfs);
+			rc = dfs_sys_mount(ca->dst_poh, ca->dst_coh, O_RDWR,
+					   DFS_SYS_NO_LOCK,
+					   &dst_file_dfs->dfs_sys);
 			if (rc != 0) {
 				fprintf(stderr, "dfs mount on destination "
 				"failed: %d\n", rc);
@@ -2857,7 +2646,7 @@ file_set_defaults_dfs(struct file_dfs *file_dfs)
 	file_dfs->fd = -1;
 	file_dfs->offset = 0;
 	file_dfs->obj = NULL;
-	file_dfs->dfs = NULL;
+	file_dfs->dfs_sys = NULL;
 }
 
 static int
@@ -2870,7 +2659,7 @@ dm_disconnect(bool is_posix_copy,
 
 	if (src_file_dfs->type == DAOS) {
 		if (is_posix_copy) {
-			rc = dfs_umount(src_file_dfs->dfs);
+			rc = dfs_sys_umount(src_file_dfs->dfs_sys);
 			if (rc != 0) {
 				fprintf(stderr, "failed to unmount "
 				"source (%d)\n", rc);
@@ -2894,7 +2683,7 @@ dm_disconnect(bool is_posix_copy,
 err_src:
 	if (dst_file_dfs->type == DAOS) {
 		if (is_posix_copy) {
-			rc = dfs_umount(dst_file_dfs->dfs);
+			rc = dfs_sys_umount(dst_file_dfs->dfs_sys);
 			if (rc != 0) {
 				fprintf(stderr, "failed to unmount destination "
 					"(%d)\n", rc);
@@ -3035,7 +2824,7 @@ fs_copy_hdlr(struct cmd_args_s *ap)
 	}
 	/* set paths based on file type for source and destination */
 	if (src_file_dfs.type == POSIX && dst_file_dfs.type == DAOS) {
-		rc = file_mkdir(&dst_file_dfs, dst_dir, &tmp_mode_dir);
+		rc = file_mkdir(&dst_file_dfs, dst_dir, tmp_mode_dir);
 		if (rc != EEXIST && rc != 0)
 			D_GOTO(out_disconnect, rc);
 		rc = fs_copy(&src_file_dfs, &dst_file_dfs,
@@ -3043,7 +2832,7 @@ fs_copy_hdlr(struct cmd_args_s *ap)
 		if (rc != 0)
 			D_GOTO(out_disconnect, rc);
 	} else if (src_file_dfs.type == DAOS && dst_file_dfs.type == POSIX) {
-		rc = file_mkdir(&dst_file_dfs, dst_dir, &tmp_mode_dir);
+		rc = file_mkdir(&dst_file_dfs, dst_dir, tmp_mode_dir);
 		if (rc != EEXIST && rc != 0)
 			D_GOTO(out_disconnect, rc);
 		rc = fs_copy(&src_file_dfs, &dst_file_dfs,
@@ -3051,7 +2840,7 @@ fs_copy_hdlr(struct cmd_args_s *ap)
 		if (rc != 0)
 			D_GOTO(out_disconnect, rc);
 	} else if (src_file_dfs.type == DAOS && dst_file_dfs.type == DAOS) {
-		rc = file_mkdir(&dst_file_dfs, dst_dir, &tmp_mode_dir);
+		rc = file_mkdir(&dst_file_dfs, dst_dir, tmp_mode_dir);
 		if (rc != EEXIST && rc != 0)
 			D_GOTO(out_disconnect, rc);
 		rc = fs_copy(&src_file_dfs, &dst_file_dfs,
