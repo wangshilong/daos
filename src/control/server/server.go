@@ -202,9 +202,9 @@ func (srv *server) initNetwork(ctx context.Context) error {
 func (srv *server) initStorage() error {
 	defer srv.logDuration(track("time to init storage"))
 
-	if err := prepBdevStorage(srv, iommuDetected(), getHugePageInfo); err != nil {
+	/*if err := prepBdevStorage(srv, iommuDetected(), getHugePageInfo); err != nil {
 		return err
-	}
+	}*/
 
 	return srv.ctlSvc.Setup()
 }
