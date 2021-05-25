@@ -75,7 +75,7 @@ rdb_path_clone(const rdb_path_t *path, rdb_path_t *new_path)
 	D_ALLOC(buf, path->iov_buf_len);
 	if (buf == NULL)
 		return -DER_NOMEM;
-	memcpy(buf, path->iov_buf, path->iov_len);
+	D_MEMCPY(buf, path->iov_buf, path->iov_len);
 	new_path->iov_buf = buf;
 	new_path->iov_buf_len = path->iov_buf_len;
 	new_path->iov_len = path->iov_len;
@@ -114,7 +114,7 @@ rdb_path_push(rdb_path_t *path, const d_iov_t *key)
 		D_ALLOC(buf, buf_len);
 		if (buf == NULL)
 			return -DER_NOMEM;
-		memcpy(buf, path->iov_buf, path->iov_len);
+		D_MEMCPY(buf, path->iov_buf, path->iov_len);
 		D_FREE(path->iov_buf);
 		path->iov_buf = buf;
 		path->iov_buf_len = buf_len;

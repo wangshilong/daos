@@ -130,7 +130,7 @@ read_map_buf(struct rdb_tx *tx, const rdb_path_t *kvs, struct pool_buf **buf,
 	D_ALLOC(*buf, size);
 	if (*buf == NULL)
 		return -DER_NOMEM;
-	memcpy(*buf, b, size);
+	D_MEMCPY(*buf, b, size);
 	return 0;
 }
 
@@ -1672,8 +1672,8 @@ pool_prop_read(struct rdb_tx *tx, const struct pool_svc *svc, uint64_t bits,
 		D_ALLOC(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf_len);
 		if (prop->dpp_entries[idx].dpe_val_ptr == NULL)
 			return -DER_NOMEM;
-		memcpy(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
-		       value.iov_buf_len);
+		D_MEMCPY(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
+			 value.iov_buf_len);
 		idx++;
 	}
 	if (bits & DAOS_PO_QUERY_PROP_OWNER) {
@@ -4194,8 +4194,8 @@ get_open_handles_cb(daos_handle_t ih, d_iov_t *key, d_iov_t *val, void *varg)
 	arg->next->pic_flags = hdl->ph_flags;
 	arg->next->pic_capas = hdl->ph_sec_capas;
 	arg->next->pic_cred_size = lookup_hdl->sph_cred.iov_buf_len;
-	memcpy(arg->next->pic_creds, lookup_hdl->sph_cred.iov_buf,
-	       lookup_hdl->sph_cred.iov_buf_len);
+	D_MEMCPY(arg->next->pic_creds, lookup_hdl->sph_cred.iov_buf,
+		 lookup_hdl->sph_cred.iov_buf_len);
 
 	/* Adjust the pointers for the next iteration */
 	arg->hdls_used = size_needed;
@@ -4718,8 +4718,8 @@ evict_iter_cb(daos_handle_t ih, d_iov_t *key, d_iov_t *val, void *varg)
 		D_ALLOC(hdl_uuids_tmp, hdl_uuids_size_tmp);
 		if (hdl_uuids_tmp == NULL)
 			return -DER_NOMEM;
-		memcpy(hdl_uuids_tmp, arg->eia_hdl_uuids,
-		       arg->eia_hdl_uuids_size);
+		D_MEMCPY(hdl_uuids_tmp, arg->eia_hdl_uuids,
+			 arg->eia_hdl_uuids_size);
 		D_FREE(arg->eia_hdl_uuids);
 		arg->eia_hdl_uuids = hdl_uuids_tmp;
 		arg->eia_hdl_uuids_size = hdl_uuids_size_tmp;

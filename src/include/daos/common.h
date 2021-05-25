@@ -28,6 +28,7 @@
 #include <daos/debug.h>
 #include <gurt/hash.h>
 #include <gurt/common.h>
+#include <gurt/memop.h>
 #include <cart/api.h>
 #include <daos_types.h>
 #include <daos_obj.h>

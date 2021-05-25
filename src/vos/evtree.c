@@ -281,7 +281,7 @@ evt_weight_diff(struct evt_weight *wt1, struct evt_weight *wt2,
 static inline void
 evt_ent_array_init_internal(struct evt_entry_array *ent_array, int max)
 {
-	memset(ent_array, 0, sizeof(*ent_array));
+	D_MEMSET(ent_array, 0, sizeof(*ent_array));
 	ent_array->ea_ents = ent_array->ea_embedded_ents;
 	ent_array->ea_size = EVT_EMBEDDED_NR;
 	ent_array->ea_max = max;
@@ -317,8 +317,8 @@ ent_array_resize(struct evt_context *tcx, struct evt_entry_array *ent_array,
 	if (ents == NULL)
 		return -DER_NOMEM;
 
-	memcpy(ents, ent_array->ea_ents,
-	       sizeof(ents[0]) * ent_array->ea_ent_nr);
+	D_MEMCPY(ents, ent_array->ea_ents,
+		 sizeof(ents[0]) * ent_array->ea_ent_nr);
 	if (ent_array->ea_ents != ent_array->ea_embedded_ents)
 		D_FREE(ent_array->ea_ents);
 	ent_array->ea_ents = ents;
@@ -398,7 +398,7 @@ ent_array_alloc(struct evt_context *tcx, struct evt_entry_array *ent_array,
 
 	*entry = evt_ent_array_get(ent_array, ent_array->ea_ent_nr++);
 	le = evt_array_entry2le(*entry);
-	memset(le, 0, sizeof(*le));
+	D_MEMSET(le, 0, sizeof(*le));
 
 	return 0;
 }
@@ -946,8 +946,8 @@ evt_tcx_set_trace(struct evt_context *tcx, int level, umem_off_t nd_off, int at,
 static void
 evt_tcx_reset_trace(struct evt_context *tcx)
 {
-	memset(&tcx->tc_trace_scratch[0], 0,
-	       sizeof(tcx->tc_trace_scratch[0]) * EVT_TRACE_MAX);
+	D_MEMSET(&tcx->tc_trace_scratch[0], 0,
+		 sizeof(tcx->tc_trace_scratch[0]) * EVT_TRACE_MAX);
 	evt_tcx_set_dep(tcx, tcx->tc_root->tr_depth);
 	evt_tcx_set_trace(tcx, 0, tcx->tc_root->tr_node, 0, false);
 }
@@ -1499,7 +1499,7 @@ evt_root_free(struct evt_context *tcx)
 	rc = evt_root_tx_add(tcx);
 	if (rc != 0)
 		goto out;
-	memset(tcx->tc_root, 0, sizeof(*tcx->tc_root));
+	D_MEMSET(tcx->tc_root, 0, sizeof(*tcx->tc_root));
 out:
 	tcx->tc_root = NULL;
 	return rc;
@@ -2781,8 +2781,8 @@ evt_common_insert(struct evt_context *tcx, struct evt_node *nd,
 
 		if (!leaf) {
 			nr = nd->tn_nr - i;
-			memmove(&nd->tn_child[i + 1], &nd->tn_child[i],
-				nr * sizeof(nd->tn_child[0]));
+			D_MEMMOVE(&nd->tn_child[i + 1], &nd->tn_child[i],
+				   nr * sizeof(nd->tn_child[0]));
 			break;
 		}
 
@@ -2792,7 +2792,7 @@ evt_common_insert(struct evt_context *tcx, struct evt_node *nd,
 					 DAOS_INTENT_CHECK);
 		if (rc != ALB_UNAVAILABLE) {
 			nr = nd->tn_nr - i;
-			memmove(ne + 1, ne, nr * sizeof(*ne));
+			D_MEMMOVE(ne + 1, ne, nr * sizeof(*ne));
 		} else {
 			umem_off_t	off = ne->ne_child;
 
@@ -2911,7 +2911,7 @@ evt_split_common(struct evt_context *tcx, bool leaf, struct evt_node *nd_src,
 		entry_size = sizeof(nd_dst->tn_child[0]);
 	}
 
-	memcpy(entry_dst, entry_src, entry_size * (nd_src->tn_nr - idx));
+	D_MEMCPY(entry_dst, entry_src, entry_size * (nd_src->tn_nr - idx));
 	nd_dst->tn_nr = nd_src->tn_nr - idx;
 	nd_src->tn_nr = idx;
 }
@@ -2991,7 +2991,7 @@ evt_common_adjust(struct evt_context *tcx, struct evt_node *nd,
 	return 0;
 move:
 	/* Execute the move */
-	memmove(dst_entry, src_entry, sizeof(*dst_entry) * count);
+	D_MEMMOVE(dst_entry, src_entry, sizeof(*dst_entry) * count);
 	nd->tn_child[i] = cached_entry;
 
 	return offset;
@@ -3271,7 +3271,7 @@ evt_node_delete(struct evt_context *tcx)
 		if (count == 0)
 			break;
 
-		memmove(data, data + child_size, child_size * count);
+		D_MEMMOVE(data, data + child_size, child_size * count);
 
 		break;
 	};
@@ -3506,7 +3506,7 @@ evt_desc_csum_fill(struct evt_context *tcx, struct evt_desc *desc,
 			"larger than destination (%"PRIu64")",
 			csum->cs_buf_len, csum_buf_len);
 	} else if (csum_buf_len > 0) {
-		memcpy(desc->pt_csum, csum->cs_csum, csum_buf_len);
+		D_MEMCPY(desc->pt_csum, csum->cs_csum, csum_buf_len);
 		if (csum_bufp != NULL)
 			*csum_bufp = desc->pt_csum;
 	}

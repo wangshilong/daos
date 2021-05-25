@@ -367,7 +367,7 @@ evt_iter_probe(daos_handle_t ih, enum evt_iter_opc opc,
 	struct evt_iterator	*iter;
 	struct evt_context	*tcx;
 	struct evt_entry_array	*enta;
-	struct evt_rect		 rtmp;
+	struct evt_rect		 rtmp = {0};
 	enum evt_find_opc	 fopc;
 	int			 rc;
 
@@ -384,8 +384,6 @@ evt_iter_probe(daos_handle_t ih, enum evt_iter_opc opc,
 
 	if (evt_iter_is_sorted(iter))
 		return evt_iter_probe_sorted(tcx, iter, opc, rect, anchor);
-
-	memset(&rtmp, 0, sizeof(rtmp));
 
 	switch (opc) {
 	default:
@@ -599,8 +597,8 @@ set_anchor:
 	*inob = tcx->tc_inob;
 
 	if (anchor) {
-		memset(anchor, 0, sizeof(*anchor));
-		memcpy(&anchor->da_buf[0], &rect, sizeof(rect));
+		D_MEMSET(anchor, 0, sizeof(*anchor));
+		D_MEMCPY(&anchor->da_buf[0], &rect, sizeof(rect));
 		anchor->da_type = DAOS_ANCHOR_TYPE_HKEY;
 	}
 	rc = 0;

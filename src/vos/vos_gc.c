@@ -463,6 +463,8 @@ gc_bin_add_item(struct umem_instance *umm, struct vos_gc_bin_df *bin,
 	it = &bag->bag_items[bag->bag_item_last];
 	if (DAOS_ON_VALGRIND)
 		umem_tx_xadd_ptr(umm, it, sizeof(*it), POBJ_XADD_NO_SNAPSHOT);
+	D_TRACE_MEMOP("pmemobj_memcpy_persist(%p, %p, %zu\n",
+		      it, item, sizeof(*it));
 	pmemobj_memcpy_persist(umm->umm_pool, it, item, sizeof(*it));
 
 	last = bag->bag_item_last + 1;

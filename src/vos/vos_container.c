@@ -48,7 +48,7 @@ static void
 cont_df_hkey_gen(struct btr_instance *tins, d_iov_t *key_iov, void *hkey)
 {
 	D_ASSERT(key_iov->iov_len == sizeof(struct d_uuid));
-	memcpy(hkey, key_iov->iov_buf, key_iov->iov_len);
+	D_MEMCPY(hkey, key_iov->iov_buf, key_iov->iov_len);
 }
 
 static int
@@ -325,7 +325,7 @@ vos_cont_open(daos_handle_t poh, uuid_t co_uuid, daos_handle_t *coh)
 	struct d_uuid			pkey;
 	struct cont_df_args		args;
 	struct vos_container		*cont = NULL;
-	struct umem_attr		uma;
+	struct umem_attr		uma = {0};
 
 	D_DEBUG(DB_TRACE, "Open container "DF_UUID"\n", DP_UUID(co_uuid));
 
@@ -386,7 +386,6 @@ vos_cont_open(daos_handle_t poh, uuid_t co_uuid, daos_handle_t *coh)
 		D_GOTO(exit, rc);
 	}
 
-	memset(&uma, 0, sizeof(uma));
 	uma.uma_id = UMEM_CLASS_VMEM;
 
 	rc = lrua_array_alloc(&cont->vc_dtx_array, DTX_ARRAY_LEN, DTX_ARRAY_NR,

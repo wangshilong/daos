@@ -41,7 +41,7 @@ tse_sched_init(tse_sched_t *sched, tse_sched_comp_cb_t comp_cb,
 
 	D_CASSERT(sizeof(sched->ds_private) >= sizeof(*dsp));
 
-	memset(sched, 0, sizeof(*sched));
+	D_MEMSET(sched, 0, sizeof(*sched));
 
 	D_INIT_LIST_HEAD(&dsp->dsp_init_list);
 	D_INIT_LIST_HEAD(&dsp->dsp_running_list);
@@ -161,7 +161,7 @@ tse_task_stack_push_data(tse_task_t *task, void *data, uint32_t data_len)
 	void	*stack_data;
 
 	stack_data = tse_task_stack_push(task, data_len);
-	memcpy(stack_data, data, data_len);
+	D_MEMCPY(stack_data, data, data_len);
 }
 
 void
@@ -170,7 +170,7 @@ tse_task_stack_pop_data(tse_task_t *task, void *data, uint32_t data_len)
 	void	*stack_data;
 
 	stack_data = tse_task_stack_pop(task, data_len);
-	memcpy(data, stack_data, data_len);
+	D_MEMCPY(data, stack_data, data_len);
 }
 
 void *
@@ -398,7 +398,7 @@ register_cb(tse_task_t *task, bool is_comp, tse_task_cb_t cb,
 	dtc->dtc_arg_size = arg_size;
 	dtc->dtc_cb = cb;
 	if (arg)
-		memcpy(dtc->dtc_arg, arg, arg_size);
+		D_MEMCPY(dtc->dtc_arg, arg, arg_size);
 
 	D_ASSERT(dtp->dtp_sched != NULL);
 

@@ -330,7 +330,7 @@ ds_obj_cpd_clone_reqs(struct dtx_leader_handle *dlh, struct daos_shard_tgt *tgt,
 		idx = dcri_parent->dcri_req_idx;
 		D_ASSERT(idx < total);
 
-		memcpy(&dcsr[i], &dcsr_parent[idx], sizeof(dcsr[i]));
+		D_MEMCPY(&dcsr[i], &dcsr_parent[idx], sizeof(dcsr[i]));
 
 		if (dcsr_parent[idx].dcsr_opc == DCSO_UPDATE) {
 			struct daos_cpd_update	*dcu_parent;

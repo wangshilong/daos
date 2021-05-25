@@ -156,7 +156,7 @@ oclass_fit_max(daos_oclass_id_t oc_id, int domain_nr, int target_nr)
 	if (!oc)
 		return NULL;
 
-	memcpy(&ca, &oc->oc_attr, sizeof(ca));
+	D_MEMCPY(&ca, &oc->oc_attr, sizeof(ca));
 	if (oc_id == OC_RP_XSF) {
 		D_ASSERT(ca.ca_resil_degree == DAOS_OBJ_RESIL_MAX);
 		D_ASSERT(ca.ca_rp_nr == DAOS_OBJ_REPL_MAX);
@@ -270,7 +270,7 @@ dc_set_oclass(uint64_t rf_factor, int domain_nr, int target_nr,
 	if (!oc)
 		return -DER_INVAL;
 
-	memcpy(&ca, &oc->oc_attr, sizeof(ca));
+	D_MEMCPY(&ca, &oc->oc_attr, sizeof(ca));
 	grp_size = daos_oclass_grp_size(&ca);
 
 	/** adjust the group size based on the sharding hint */
@@ -508,8 +508,8 @@ obj_encode_full_stripe(daos_obj_id_t oid, d_sg_list_t *sgl, uint32_t *sg_idx,
 				unsigned char *from =
 					sgl->sg_iovs[*sg_idx].iov_buf;
 
-				memcpy(&ldata[lcnt][cp_cnt], &from[*sg_off],
-				       cp_amt);
+				D_MEMCPY(&ldata[lcnt][cp_cnt], &from[*sg_off],
+					 cp_amt);
 				if (sgl->sg_iovs[*sg_idx].iov_len - *sg_off <=
 					len - cp_cnt) {
 					*sg_off = 0;

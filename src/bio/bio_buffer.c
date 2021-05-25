@@ -488,7 +488,7 @@ iod_add_chunk(struct bio_desc *biod, struct bio_dma_chunk *chk)
 			return -DER_NOMEM;
 
 		if (max != 0) {
-			memcpy(chunks, rsrvd_dma->brd_dma_chks, max * size);
+			D_MEMCPY(chunks, rsrvd_dma->brd_dma_chks, max * size);
 			D_FREE(rsrvd_dma->brd_dma_chks);
 		}
 
@@ -522,7 +522,7 @@ iod_add_region(struct bio_desc *biod, struct bio_dma_chunk *chk,
 			return -DER_NOMEM;
 
 		if (max != 0) {
-			memcpy(rgs, rsrvd_dma->brd_regions, max * size);
+			D_MEMCPY(rgs, rsrvd_dma->brd_regions, max * size);
 			D_FREE(rsrvd_dma->brd_regions);
 		}
 
@@ -846,7 +846,7 @@ dma_rw(struct bio_desc *biod, bool prep)
 				"pg_idx:"DF_U64" pg_off:%d\n",
 				blob, payload, pg_idx, pg_off);
 
-			memset(payload, 0, BIO_DMA_PAGE_SZ);
+			D_MEMSET_ASYNC(payload, 0, BIO_DMA_PAGE_SZ);
 			pg_rmw = payload;
 		}
 
@@ -860,7 +860,7 @@ dma_rw(struct bio_desc *biod, bool prep)
 				"pg_idx:"DF_U64" pg_off:%d\n",
 				blob, payload, pg_idx, pg_off);
 
-			memset(payload, 0, BIO_DMA_PAGE_SZ);
+			D_MEMSET_ASYNC(payload, 0, BIO_DMA_PAGE_SZ);
 			pg_rmw = payload;
 		}
 	}
@@ -902,12 +902,14 @@ bio_memcpy(struct bio_desc *biod, uint16_t media, void *media_addr,
 			umem_tx_xadd_ptr(umem, media_addr, n,
 					 POBJ_XADD_NO_SNAPSHOT);
 		}
+		D_MEMOP_TRACE("pmemobj_memcpy_persist(%p, %p, %zi\n",
+			      media_addr, addr, n);
 		pmemobj_memcpy_persist(umem->umm_pool, media_addr, addr, n);
 	} else {
 		if (biod->bd_update)
-			memcpy(media_addr, addr, n);
+			D_MEMCPY_ASYNC(media_addr, addr, n);
 		else
-			memcpy(addr, media_addr, n);
+			D_MEMCPY_ASYNC(addr, media_addr, n);
 	}
 }
 

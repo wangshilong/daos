@@ -187,8 +187,8 @@ full:
 		idx = start + tx->tx_write_cnt;
 	}
 
-	memcpy(buf + to, tx->tx_req_cache + from,
-	       (tx->tx_read_cnt + tx->tx_write_cnt) * sizeof(*buf));
+	D_MEMCPY(buf + to, tx->tx_req_cache + from,
+		 (tx->tx_read_cnt + tx->tx_write_cnt) * sizeof(*buf));
 	D_FREE(tx->tx_req_cache);
 	tx->tx_req_cache = buf;
 	tx->tx_total_slots = count;
@@ -1243,8 +1243,8 @@ dc_tx_classify_common(struct dc_tx *tx, struct daos_cpd_sub_req *dcsr,
 				D_GOTO(out, rc = -DER_NOMEM);
 			}
 
-			memcpy(dcri, dtrg->dtrg_req_idx,
-			       sizeof(*dcri) * dtrg->dtrg_slot_cnt);
+			D_MEMCPY(dcri, dtrg->dtrg_req_idx,
+				 sizeof(*dcri) * dtrg->dtrg_slot_cnt);
 			D_FREE(dtrg->dtrg_req_idx);
 			dtrg->dtrg_req_idx = dcri;
 			dtrg->dtrg_slot_cnt <<= 1;
@@ -1696,7 +1696,7 @@ dc_tx_commit_prepare(struct dc_tx *tx, tse_task_t *task)
 					       dtr_link)) != NULL) {
 			size = sizeof(dtr->dtr_group) +
 			       sizeof(uint32_t) * dtr->dtr_group.drg_tgt_cnt;
-			memcpy(ptr, &dtr->dtr_group, size);
+			D_MEMCPY(ptr, &dtr->dtr_group, size);
 			ptr += size;
 			D_FREE(dtr);
 		}
@@ -2224,8 +2224,8 @@ dc_tx_add_update(struct dc_tx *tx, daos_handle_t oh, uint64_t flags,
 		if (iod_array->oia_iods[i].iod_recxs == NULL)
 			D_GOTO(fail, rc = -DER_NOMEM);
 
-		memcpy(iod_array->oia_iods[i].iod_recxs, iods[i].iod_recxs,
-		       sizeof(daos_recx_t) * iods[i].iod_nr);
+		D_MEMCPY(iod_array->oia_iods[i].iod_recxs, iods[i].iod_recxs,
+			 sizeof(daos_recx_t) * iods[i].iod_nr);
 	}
 
 	D_ALLOC_ARRAY(dcsr->dcsr_sgls, nr);

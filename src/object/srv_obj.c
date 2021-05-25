@@ -271,9 +271,9 @@ obj_bulk_bypass(d_sg_list_t *sgl, crt_bulk_op_t bulk_op)
 		while (total != 0) {
 			nob = min(dummy_buf_len, total);
 			if (bulk_op == CRT_BULK_PUT)
-				memcpy(dummy_buf, buf, nob);
+				D_MEMCPY_ASYNC(dummy_buf, buf, nob);
 			else
-				memcpy(buf, dummy_buf, nob);
+				D_MEMCPY_ASYNC(buf, dummy_buf, nob);
 
 			total -= nob;
 			buf   += nob;
@@ -1134,8 +1134,9 @@ obj_dedup_verify(daos_handle_t ioh, struct bio_sglist *bsgls_dup, int sgl_nr)
 			D_ASSERT(BIO_ADDR_IS_DEDUP(&biov_dup->bi_addr));
 
 			D_ASSERT(bio_iov2len(biov) == bio_iov2len(biov_dup));
-			rc = memcmp(bio_iov2buf(biov), bio_iov2buf(biov_dup),
-				    bio_iov2len(biov));
+			rc = D_MEMCMP_ASYNC(bio_iov2buf(biov),
+					    bio_iov2buf(biov_dup),
+					    bio_iov2len(biov));
 
 			if (rc == 0) {	/* verify succeeded */
 				D_DEBUG(DB_IO, "Verify dedup succeeded\n");
@@ -1293,8 +1294,8 @@ daos_iod_recx_dup(daos_iod_t *iods, uint32_t iod_nr, daos_iod_t **iods_dup_ptr)
 			return -DER_NOMEM;
 		}
 
-		memcpy(dst->iod_recxs, src->iod_recxs,
-		       sizeof(*dst->iod_recxs) * dst->iod_nr);
+		D_MEMCPY(dst->iod_recxs, src->iod_recxs,
+			 sizeof(*dst->iod_recxs) * dst->iod_nr);
 	}
 
 	*iods_dup_ptr = iods_dup;
@@ -1673,7 +1674,7 @@ obj_ioc_init(uuid_t pool_uuid, uuid_t coh_uuid, uuid_t cont_uuid, int opc,
 	int		      rc;
 
 	D_ASSERT(ioc != NULL);
-	memset(ioc, 0, sizeof(*ioc));
+	D_MEMSET(ioc, 0, sizeof(*ioc));
 	ioc->ioc_opc = opc;
 
 	rc = ds_cont_find_hdl(pool_uuid, coh_uuid, &coh);
@@ -2679,7 +2680,7 @@ obj_restore_enum_args(crt_rpc_t *rpc, struct dss_enum_arg *des,
 		return 0;
 
 	if (des->kds != NULL)
-		memset(des->kds, 0, des->kds_cap * sizeof(daos_key_desc_t));
+		D_MEMSET(des->kds, 0, des->kds_cap * sizeof(daos_key_desc_t));
 
 	if (oeo->oeo_sgl.sg_iovs == NULL)
 		return 0;

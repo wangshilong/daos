@@ -166,7 +166,7 @@ dtx_cleanup_stale_iter_cb(uuid_t co_uuid, vos_iter_entry_t *ent, void *args)
 	mbs->dm_data_size = ent->ie_dtx_mbs_dsize;
 	mbs->dm_flags = ent->ie_dtx_mbs_flags;
 	mbs->dm_dte_flags = ent->ie_dtx_flags;
-	memcpy(mbs->dm_data, ent->ie_dtx_mbs, ent->ie_dtx_mbs_dsize);
+	D_MEMCPY(mbs->dm_data, ent->ie_dtx_mbs, ent->ie_dtx_mbs_dsize);
 
 	d_list_add_tail(&dsp->dsp_link, &dcsca->dcsca_list);
 	dcsca->dcsca_count++;
@@ -638,18 +638,18 @@ dtx_insert_oid(struct dtx_handle *dth, daos_unit_oid_t *oid, bool touch_leader)
 		if (rc > 0) {
 			/* Insert before dth->dth_oid_array[at]. */
 			if (at > 0)
-				memcpy(&oid_array[0], &dth->dth_oid_array[0],
-				       sizeof(*oid) * at);
+				D_MEMCPY(&oid_array[0], &dth->dth_oid_array[0],
+					 sizeof(*oid) * at);
 			oid_array[at] = *oid;
-			memcpy(&oid_array[at + 1], &dth->dth_oid_array[at],
-			       sizeof(*oid) * (dth->dth_oid_cnt - at));
+			D_MEMCPY(&oid_array[at + 1], &dth->dth_oid_array[at],
+				 sizeof(*oid) * (dth->dth_oid_cnt - at));
 		} else {
 			/* Insert after dth->dth_oid_array[at]. */
-			memcpy(&oid_array[0], &dth->dth_oid_array[0],
-			       sizeof(*oid) * (at + 1));
+			D_MEMCPY(&oid_array[0], &dth->dth_oid_array[0],
+				 sizeof(*oid) * (at + 1));
 			oid_array[at + 1] = *oid;
 			if (at < dth->dth_oid_cnt - 1)
-				memcpy(&oid_array[at + 2],
+				D_MEMCPY(&oid_array[at + 2],
 				&dth->dth_oid_array[at + 1],
 				sizeof(*oid) * (dth->dth_oid_cnt - 1 - at));
 		}
@@ -663,16 +663,15 @@ dtx_insert_oid(struct dtx_handle *dth, daos_unit_oid_t *oid, bool touch_leader)
 
 	if (rc > 0) {
 		/* Insert before dth->dth_oid_array[at]. */
-		memmove(&dth->dth_oid_array[at + 1],
-			&dth->dth_oid_array[at],
-			sizeof(*oid) * (dth->dth_oid_cnt - at));
+		D_MEMMOVE(&dth->dth_oid_array[at + 1], &dth->dth_oid_array[at],
+			  sizeof(*oid) * (dth->dth_oid_cnt - at));
 		dth->dth_oid_array[at] = *oid;
 	} else {
 		/* Insert after dth->dth_oid_array[at]. */
 		if (at < dth->dth_oid_cnt - 1)
-			memmove(&dth->dth_oid_array[at + 2],
-				&dth->dth_oid_array[at + 1],
-				sizeof(*oid) * (dth->dth_oid_cnt - 1 - at));
+			D_MEMMOVE(&dth->dth_oid_array[at + 2],
+				  &dth->dth_oid_array[at + 1],
+				  sizeof(*oid) * (dth->dth_oid_cnt - 1 - at));
 		dth->dth_oid_array[at + 1] = *oid;
 	}
 
@@ -790,7 +789,7 @@ dtx_leader_begin(daos_handle_t coh, struct dtx_id *dti,
 	int			 rc;
 	int			 i;
 
-	memset(dlh, 0, sizeof(*dlh));
+	D_MEMSET(dlh, 0, sizeof(*dlh));
 
 	if (tgt_cnt > 0) {
 		dlh->dlh_future = ABT_FUTURE_NULL;
@@ -988,7 +987,7 @@ dtx_leader_end(struct dtx_leader_handle *dlh, struct ds_cont_child *cont,
 	}
 
 	mbs = (struct dtx_memberships *)(dte + 1);
-	memcpy(mbs, dth->dth_mbs, size - sizeof(*dte));
+	D_MEMCPY(mbs, dth->dth_mbs, size - sizeof(*dte));
 
 	dte->dte_xid = dth->dth_xid;
 	dte->dte_ver = dth->dth_ver;
@@ -1232,7 +1231,7 @@ dtx_batched_commit_register(struct ds_cont_child *cont)
 	struct dss_module_info		*dmi = dss_get_module_info();
 	struct dtx_batched_commit_args	*dbca;
 	d_list_t			*head;
-	struct umem_attr		 uma;
+	struct umem_attr		 uma = { 0 };
 	int				 rc;
 
 	/* If batched commit ULT is not enabled, then sync commit DTX. */
@@ -1262,7 +1261,6 @@ dtx_batched_commit_register(struct ds_cont_child *cont)
 	if (daos_handle_is_valid(cont->sc_dtx_cos_hdl))
 		goto add;
 
-	memset(&uma, 0, sizeof(uma));
 	uma.uma_id = UMEM_CLASS_VMEM;
 	rc = dbtree_create_inplace_ex(DBTREE_CLASS_DTX_COS, 0,
 				      DTX_COS_BTREE_ORDER, &uma,

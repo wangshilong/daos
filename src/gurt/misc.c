@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include <gurt/common.h>
+#include <gurt/memop.h>
 
 void
 d_free(void *ptr)
@@ -97,8 +98,8 @@ d_rank_list_dup(d_rank_list_t **dst, const d_rank_list_t *src)
 		D_GOTO(out, rc = -DER_NOMEM);
 	}
 
-	memcpy(rank_list->rl_ranks, src->rl_ranks,
-		rank_list->rl_nr * sizeof(*rank_list->rl_ranks));
+	D_MEMCPY(rank_list->rl_ranks, src->rl_ranks,
+		 rank_list->rl_nr * sizeof(*rank_list->rl_ranks));
 
 out:
 	if (rc == 0)
@@ -280,7 +281,7 @@ d_rank_list_copy(d_rank_list_t *dst, d_rank_list_t *src)
 		dst->rl_nr = src->rl_nr;
 	}
 
-	memcpy(dst->rl_ranks, src->rl_ranks, dst->rl_nr * sizeof(d_rank_t));
+	D_MEMCPY(dst->rl_ranks, src->rl_ranks, dst->rl_nr * sizeof(d_rank_t));
 out:
 	return rc;
 }
@@ -357,7 +358,7 @@ d_rank_list_del(d_rank_list_t *rank_list, d_rank_t rank)
 	dest = &rank_list->rl_ranks[idx];
 	D_ASSERT(idx <= new_num);
 	num_bytes = (new_num - idx) * sizeof(d_rank_t);
-	memmove(dest, src, num_bytes);
+	D_MEMMOVE(dest, src, num_bytes);
 	rank_list = d_rank_list_realloc(rank_list, new_num);
 	if (rank_list == NULL) {
 		D_ERROR("d_rank_list_realloc() failed.\n");

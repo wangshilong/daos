@@ -70,8 +70,8 @@ ds_iv_class_register(unsigned int class_id, struct crt_iv_ops *crt_ops,
 			return -DER_NOMEM;
 
 		if (crt_iv_class_nr > 0)
-			memcpy(new_iv_class, crt_iv_class,
-			       crt_iv_class_nr * sizeof(*new_iv_class));
+			D_MEMCPY(new_iv_class, crt_iv_class,
+				 crt_iv_class_nr * sizeof(*new_iv_class));
 
 		new_iv_class[crt_iv_class_nr].ivc_id = 0;
 		new_iv_class[crt_iv_class_nr].ivc_feats = 0;
@@ -156,7 +156,7 @@ iv_key_unpack(struct ds_iv_key *key_iv, crt_iv_key_t *key_iov)
 		rc = class->iv_class_ops->ivc_key_unpack(class, key_iov,
 							 key_iv);
 	else
-		memcpy(key_iv, key_iov->iov_buf, sizeof(*key_iv));
+		D_MEMCPY(key_iv, key_iov->iov_buf, sizeof(*key_iv));
 
 	D_DEBUG(DB_TRACE, "unpack %d\n", key_iv->class_id);
 	return rc;
@@ -919,7 +919,7 @@ iv_op_internal(struct ds_iv_ns *ns, struct ds_iv_key *key_iv,
 	       d_sg_list_t *value, crt_iv_sync_t *sync,
 	       unsigned int shortcut, int opc)
 {
-	struct iv_cb_info	cb_info;
+	struct iv_cb_info	cb_info = {0};
 	ABT_future		future;
 	crt_iv_key_t		key_iov;
 	struct ds_iv_class	*class;
@@ -939,7 +939,6 @@ iv_op_internal(struct ds_iv_ns *ns, struct ds_iv_key *key_iv,
 		key_iv->class_id, key_iv->rank, class->iv_cart_class_id, opc);
 
 	iv_key_pack(&key_iov, key_iv);
-	memset(&cb_info, 0, sizeof(cb_info));
 	cb_info.future = future;
 	cb_info.key = key_iv;
 	cb_info.value = value;
@@ -1056,7 +1055,7 @@ retry:
 			}
 		}
 
-		memcpy(&arg->iv_key, key, sizeof(*key));
+		D_MEMCPY(&arg->iv_key, key, sizeof(*key));
 		arg->shortcut = shortcut;
 		arg->iv_sync = *sync;
 		arg->retry = retry;

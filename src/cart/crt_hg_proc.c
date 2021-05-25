@@ -74,9 +74,9 @@ crt_proc_memcpy(crt_proc_t proc, crt_proc_op_t proc_op,
 
 	buf = hg_proc_save_ptr(proc, data_size);
 	if (ENCODING(proc_op))
-		memcpy(buf, data, data_size);
+		D_MEMCPY(buf, data, data_size);
 	else /* DECODING(proc_op) */
-		memcpy(data, buf, data_size);
+		D_MEMCPY(data, buf, data_size);
 
 	return 0;
 }
@@ -156,7 +156,7 @@ crt_proc_d_rank_list_t(crt_proc_t proc, crt_proc_op_t proc_op,
 		nr = rank_list->rl_nr;
 		*buf = nr;
 		buf = hg_proc_save_ptr(proc, nr * sizeof(*buf));
-		memcpy(buf, rank_list->rl_ranks, nr * sizeof(*buf));
+		D_MEMCPY(buf, rank_list->rl_ranks, nr * sizeof(*buf));
 		break;
 	case CRT_PROC_DECODE:
 		buf = hg_proc_save_ptr(proc, sizeof(*buf));
@@ -171,7 +171,7 @@ crt_proc_d_rank_list_t(crt_proc_t proc, crt_proc_op_t proc_op,
 		if (unlikely(rank_list == NULL))
 			D_GOTO(out, rc = -DER_NOMEM);
 		buf = hg_proc_save_ptr(proc, nr * sizeof(*buf));
-		memcpy(rank_list->rl_ranks, buf, nr * sizeof(*buf));
+		D_MEMCPY(rank_list->rl_ranks, buf, nr * sizeof(*buf));
 		rank_list->rl_nr = nr;
 		*data = rank_list;
 		break;

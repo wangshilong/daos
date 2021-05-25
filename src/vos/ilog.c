@@ -254,7 +254,7 @@ ilog_rec_fetch(struct btr_instance *tins, struct btr_record *rec,
 	} else {
 		D_ASSERT(sizeof(*epoch) == key_iov->iov_buf_len);
 
-		memcpy(key_iov->iov_buf, epoch, sizeof(*epoch));
+		*((daos_epoch_t *)key_iov->iov_buf) = *epoch;
 		key_iov->iov_len = sizeof(*epoch);
 	}
 	if (val_iov->iov_buf == NULL) {
@@ -262,7 +262,7 @@ ilog_rec_fetch(struct btr_instance *tins, struct btr_record *rec,
 	} else {
 		D_ASSERT(sizeof(*prec) == val_iov->iov_buf_len);
 
-		memcpy(val_iov->iov_buf, prec, sizeof(*prec));
+		D_MEMCPY(val_iov->iov_buf, prec, sizeof(*prec));
 		val_iov->iov_len = sizeof(*prec);
 	}
 
@@ -459,7 +459,7 @@ ilog_ptr_set_full(struct ilog_context *lctx, void *dest, const void *src,
 		goto done;
 	}
 
-	memcpy(dest, src, len);
+	D_MEMCPY(dest, src, len);
 done:
 	return rc;
 }
@@ -1153,7 +1153,7 @@ ilog_fetch_init(struct ilog_entries *entries)
 	struct ilog_priv	*priv = ilog_ent2priv(entries);
 
 	D_ASSERT(entries != NULL);
-	memset(entries, 0, sizeof(*entries));
+	D_MEMSET(entries, 0, sizeof(*entries));
 	entries->ie_entries = &priv->ip_embedded[0];
 	priv->ip_ih = DAOS_HDL_INVAL;
 }
@@ -1288,8 +1288,7 @@ alloc_entry(struct ilog_entries *entries)
 		return NULL;
 	}
 
-	memcpy(new_data, entries->ie_entries,
-	       sizeof(*new_data) * old_count);
+	D_MEMCPY(new_data, entries->ie_entries, sizeof(*new_data) * old_count);
 	if (dealloc)
 		D_FREE(entries->ie_entries);
 

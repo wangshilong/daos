@@ -940,10 +940,10 @@ dc_pool_l2g(daos_handle_t poh, d_iov_t *glob)
 	pool_glob->dpg_capas = pool->dp_capas;
 	pool_glob->dpg_map_version = map_version;
 	pool_glob->dpg_map_pb_nr = pb_nr;
-	memcpy(pool_glob->dpg_map_buf, map_buf, pool_buf_size(pb_nr));
+	D_MEMCPY(pool_glob->dpg_map_buf, map_buf, pool_buf_size(pb_nr));
 	/* rsvc_client */
 	p = (void *)pool_glob->dpg_map_buf + pool_buf_size(pb_nr);
-	memcpy(p, client_buf, client_len);
+	D_MEMCPY(p, client_buf, client_len);
 	/* dc_mgmt_sys */
 	p += client_len;
 	rc = dc_mgmt_sys_encode(pool->dp_sys, p,

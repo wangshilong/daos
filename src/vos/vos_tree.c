@@ -110,13 +110,13 @@ ktr_rec_store(struct btr_instance *tins, struct btr_record *rec,
 	if (krec->kr_cs_size != 0) {
 		D_ASSERT(csum->cs_csum);
 		krec->kr_cs_type = csum->cs_type;
-		memcpy(vos_krec2csum(krec), csum->cs_csum, csum->cs_len);
+		D_MEMCPY(vos_krec2csum(krec), csum->cs_csum, csum->cs_len);
 	}
 	kbuf = vos_krec2key(krec);
 
 	if (iov->iov_buf != NULL) {
 		D_ASSERT(iov->iov_buf == key_iov->iov_buf);
-		memcpy(kbuf, iov->iov_buf, iov->iov_len);
+		D_MEMCPY(kbuf, iov->iov_buf, iov->iov_len);
 	} else {
 		/* return it for RDMA */
 		iov->iov_buf = kbuf;
@@ -149,7 +149,7 @@ ktr_rec_load(struct btr_instance *tins, struct btr_record *rec,
 		iov->iov_buf_len = krec->kr_size;
 
 	} else if (iov->iov_buf_len >= iov->iov_len) {
-		memcpy(iov->iov_buf, kbuf, iov->iov_len);
+		D_MEMCPY(iov->iov_buf, kbuf, iov->iov_len);
 	}
 
 	csum->cs_len  = krec->kr_cs_size;
@@ -157,7 +157,7 @@ ktr_rec_load(struct btr_instance *tins, struct btr_record *rec,
 	if (csum->cs_csum == NULL)
 		csum->cs_csum = (uint8_t *) vos_krec2csum(krec);
 	else if (csum->cs_buf_len > csum->cs_len)
-		memcpy(csum->cs_csum, vos_krec2csum(krec), csum->cs_len);
+		D_MEMCPY(csum->cs_csum, vos_krec2csum(krec), csum->cs_len);
 
 	return 0;
 }
@@ -196,7 +196,8 @@ ktr_hkey_gen(struct btr_instance *tins, d_iov_t *key_iov, void *hkey)
 
 		/** Set the lowest bit for inline key */
 		kkey->kh_inline_len = (key_iov->iov_len << 2) | 1;
-		memcpy(&kkey->kh_inline[0], key_iov->iov_buf, key_iov->iov_len);
+		D_MEMCPY(&kkey->kh_inline[0], key_iov->iov_buf,
+			 key_iov->iov_len);
 		D_ASSERT(kkey->kh_len & 1);
 		return;
 	}
@@ -244,8 +245,8 @@ ktr_key_cmp_lexical(struct vos_krec_df *krec, d_iov_t *kiov)
 	int cmp;
 
 	/* First, compare the bytes */
-	cmp = memcmp(vos_krec2key(krec), (char *)kiov->iov_buf,
-		     min(krec->kr_size, kiov->iov_len));
+	cmp = D_MEMCMP(vos_krec2key(krec), (char *)kiov->iov_buf,
+		       min(krec->kr_size, kiov->iov_len));
 	if (cmp)
 		return dbtree_key_cmp_rc(cmp);
 
@@ -269,7 +270,7 @@ ktr_key_cmp_default(struct vos_krec_df *krec, d_iov_t *kiov)
 		return BTR_CMP_LT;
 
 	return dbtree_key_cmp_rc(
-		memcmp(vos_krec2key(krec), kiov->iov_buf, kiov->iov_len));
+		D_MEMCMP(vos_krec2key(krec), kiov->iov_buf, kiov->iov_len));
 }
 
 /** compare the real key */
@@ -471,7 +472,7 @@ svt_rec_store(struct btr_instance *tins, struct btr_record *rec,
 		addr = vos_irec2data(irec);
 		*((int *)addr) = rand();
 	} else {
-		memcpy(vos_irec2csum(irec), csum->cs_csum, csum->cs_len);
+		D_MEMCPY(vos_irec2csum(irec), csum->cs_csum, csum->cs_len);
 	}
 
 	return 0;
@@ -506,8 +507,8 @@ svt_rec_load(struct btr_instance *tins, struct btr_record *rec,
 		csum->cs_nr		= 1; /** sv only has 1 csum */
 		csum->cs_chunksize	= CSUM_NO_CHUNK;
 		if (csum->cs_csum)
-			memcpy(csum->cs_csum,
-			       vos_irec2csum(irec), csum->cs_len);
+			D_MEMCPY(csum->cs_csum, vos_irec2csum(irec),
+				 csum->cs_len);
 		else
 			csum->cs_csum = (uint8_t *) vos_irec2csum(irec);
 	}
@@ -1017,7 +1018,7 @@ key_tree_prepare(struct vos_object *obj, daos_handle_t toh,
 	rbund.rb_off	= UMOFF_NULL;
 	rbund.rb_csum	= &csum;
 	rbund.rb_tclass	= tclass;
-	memset(&csum, 0, sizeof(csum));
+	D_MEMSET(&csum, 0, sizeof(csum));
 
 	/* NB: In order to avoid complexities of passing parameters to the
 	 * multi-nested tree, tree operations are not nested, instead:

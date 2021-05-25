@@ -78,7 +78,7 @@ dtx_cos_hkey_gen(struct btr_instance *tins, d_iov_t *key_iov, void *hkey)
 {
 	D_ASSERT(key_iov->iov_len == sizeof(struct dtx_cos_key));
 
-	memcpy(hkey, key_iov->iov_buf, key_iov->iov_len);
+	D_MEMCPY(hkey, key_iov->iov_buf, key_iov->iov_len);
 }
 
 static int
@@ -88,7 +88,7 @@ dtx_cos_hkey_cmp(struct btr_instance *tins, struct btr_record *rec, void *hkey)
 	struct dtx_cos_key *hkey2 = (struct dtx_cos_key *)hkey;
 	int		    rc;
 
-	rc = memcmp(hkey1, hkey2, sizeof(struct dtx_cos_key));
+	rc = D_MEMCMP(hkey1, hkey2, sizeof(struct dtx_cos_key));
 
 	return dbtree_key_cmp_rc(rc);
 }
@@ -406,7 +406,7 @@ dtx_del_cos(struct ds_cont_child *cont, struct dtx_id *xid,
 	dcr = (struct dtx_cos_rec *)riov.iov_buf;
 
 	d_list_for_each_entry(dcrc, &dcr->dcr_prio_list, dcrc_lo_link) {
-		if (memcmp(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
+		if (D_MEMCMP(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
 			continue;
 
 		d_list_del(&dcrc->dcrc_gl_committable);
@@ -421,7 +421,7 @@ dtx_del_cos(struct ds_cont_child *cont, struct dtx_id *xid,
 	}
 
 	d_list_for_each_entry(dcrc, &dcr->dcr_reg_list, dcrc_lo_link) {
-		if (memcmp(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
+		if (D_MEMCMP(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
 			continue;
 
 		d_list_del(&dcrc->dcrc_gl_committable);
@@ -436,7 +436,7 @@ dtx_del_cos(struct ds_cont_child *cont, struct dtx_id *xid,
 	}
 
 	d_list_for_each_entry(dcrc, &dcr->dcr_expcmt_list, dcrc_lo_link) {
-		if (memcmp(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
+		if (D_MEMCMP(&dcrc->dcrc_dte->dte_xid, xid, sizeof(*xid)) != 0)
 			continue;
 
 		d_list_del(&dcrc->dcrc_gl_committable);

@@ -606,7 +606,7 @@ crt_proto_query(crt_endpoint_t *tgt_ep, crt_opcode_t base_opc,
 	D_ALLOC_ARRAY(tmp_array, count);
 	if (tmp_array == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
-	memcpy(tmp_array, ver, sizeof(tmp_array[0]) * count);
+	D_MEMCPY(tmp_array, ver, sizeof(tmp_array[0]) * count);
 
 	/* set input */
 	d_iov_set_safe(&rpc_req_input->pq_ver, tmp_array, sizeof(*ver) * count);

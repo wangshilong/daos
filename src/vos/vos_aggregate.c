@@ -197,13 +197,13 @@ reset_agg_pos(vos_iter_type_t type, struct vos_agg_param *agg_param)
 {
 	switch (type) {
 	case VOS_ITER_OBJ:
-		memset(&agg_param->ap_oid, 0, sizeof(agg_param->ap_oid));
+		D_MEMSET(&agg_param->ap_oid, 0, sizeof(agg_param->ap_oid));
 		break;
 	case VOS_ITER_DKEY:
-		memset(&agg_param->ap_dkey, 0, sizeof(agg_param->ap_dkey));
+		D_MEMSET(&agg_param->ap_dkey, 0, sizeof(agg_param->ap_dkey));
 		break;
 	case VOS_ITER_AKEY:
-		memset(&agg_param->ap_akey, 0, sizeof(agg_param->ap_akey));
+		D_MEMSET(&agg_param->ap_akey, 0, sizeof(agg_param->ap_akey));
 		break;
 	default:
 		break;
@@ -269,7 +269,7 @@ vos_agg_key_compare(daos_key_t key1, daos_key_t key2)
 	if (key1.iov_len != key2.iov_len)
 		return 1;
 
-	return memcmp(key1.iov_buf, key2.iov_buf, key1.iov_len);
+	return D_MEMCMP(key1.iov_buf, key2.iov_buf, key1.iov_len);
 }
 
 static int
@@ -506,7 +506,7 @@ csum_prepare_buf(struct agg_lgc_seg *segs, unsigned int seg_cnt,
 	} else
 		buffer = *csum_bufp;
 
-	memset(buffer, 0, new_len);
+	D_MEMSET(buffer, 0, new_len);
 	for (i = 0; i < seg_cnt; i++) {
 		struct dcs_csum_info *csum_info = &segs[i].ls_ent_in.ei_csum;
 
@@ -552,7 +552,7 @@ prepare_segments(struct agg_merge_window *mw)
 		io->ic_segs = lgc_seg;
 		io->ic_seg_max = seg_max;
 	}
-	memset(io->ic_segs, 0, io->ic_seg_max * sizeof(*lgc_seg));
+	D_MEMSET(io->ic_segs, 0, io->ic_seg_max * sizeof(*lgc_seg));
 	io->ic_seg_cnt = 0;
 
 	/* Generate coalesced segments according to visible logical entries */
@@ -687,7 +687,7 @@ reserve_segment(struct vos_object *obj, struct agg_io_context *io,
 	uint16_t	media;
 	int		rc;
 
-	memset(addr, 0, sizeof(*addr));
+	D_MEMSET(addr, 0, sizeof(*addr));
 	media = vos_media_select(vos_obj2pool(obj), DAOS_IOD_ARRAY, size);
 
 	if (media == DAOS_MEDIA_SCM) {
@@ -2078,7 +2078,7 @@ merge_window_init(struct agg_merge_window *mw, void (*func)(void *))
 {
 	struct agg_io_context *io = &mw->mw_io_ctxt;
 
-	memset(mw, 0, sizeof(*mw));
+	D_MEMSET(mw, 0, sizeof(*mw));
 	D_INIT_LIST_HEAD(&mw->mw_phy_ents);
 	D_INIT_LIST_HEAD(&io->ic_nvme_exts);
 	io->ic_csum_recalc_func = func;

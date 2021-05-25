@@ -63,7 +63,8 @@ cont_iv_ent_init(struct ds_iv_key *iv_key, void *data,
 	if (entry->iv_value.sg_iovs[0].iov_buf == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
 
-	memcpy(entry->iv_value.sg_iovs[0].iov_buf, &root_hdl, sizeof(root_hdl));
+	D_MEMCPY(entry->iv_value.sg_iovs[0].iov_buf, &root_hdl,
+		 sizeof(root_hdl));
 out:
 	if (rc != 0) {
 		dbtree_destroy(root_hdl, NULL);
@@ -171,7 +172,7 @@ cont_iv_ent_copy(struct ds_iv_entry *entry, struct cont_iv_key *key,
 		}
 
 		size = offsetof(struct cont_iv_snapshot, snaps[snap_cnt]);
-		memcpy(&dst->iv_snap, &src->iv_snap, size);
+		D_MEMCPY(&dst->iv_snap, &src->iv_snap, size);
 
 		break;
 	case IV_CONT_CAPA:
@@ -183,7 +184,7 @@ cont_iv_ent_copy(struct ds_iv_entry *entry, struct cont_iv_key *key,
 			 cont_iv_prop_ent_size(src->iv_prop.cip_acl.dal_len));
 		size = offsetof(struct cont_iv_prop,
 				cip_acl.dal_ace[src->iv_prop.cip_acl.dal_len]);
-		memcpy(&dst->iv_prop, &src->iv_prop, size);
+		D_MEMCPY(&dst->iv_prop, &src->iv_prop, size);
 		break;
 	default:
 		D_ERROR("bad iv_class_id %d.\n", entry->iv_class->iv_class_id);
@@ -226,11 +227,11 @@ cont_iv_snap_ent_create(struct ds_iv_entry *entry, struct ds_iv_key *key)
 	if (iv_entry == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
 
-	memcpy(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf,
-		sizeof(root_hdl));
+	D_MEMCPY(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf,
+		 sizeof(root_hdl));
 	uuid_copy(iv_entry->cont_uuid, civ_key->cont_uuid);
 	iv_entry->iv_snap.snap_cnt = snap_cnt;
-	memcpy(iv_entry->iv_snap.snaps, snaps, snap_cnt * sizeof(*snaps));
+	D_MEMCPY(iv_entry->iv_snap.snaps, snaps, snap_cnt * sizeof(*snaps));
 	d_iov_set(&val_iov, iv_entry,
 		  cont_iv_snap_ent_size(iv_entry->iv_snap.snap_cnt));
 	d_iov_set(&key_iov, &civ_key->cont_uuid, sizeof(civ_key->cont_uuid));
@@ -302,8 +303,8 @@ cont_iv_prop_l2g(daos_prop_t *prop, struct cont_iv_prop *iv_prop)
 		case DAOS_PROP_CO_ACL:
 			acl = prop_entry->dpe_val_ptr;
 			if (acl != NULL)
-				memcpy(&iv_prop->cip_acl, acl,
-				       daos_acl_get_size(acl));
+				D_MEMCPY(&iv_prop->cip_acl, acl,
+					 daos_acl_get_size(acl));
 			break;
 		case DAOS_PROP_CO_OWNER:
 			D_ASSERT(strlen(prop_entry->dpe_str) <=
@@ -318,8 +319,8 @@ cont_iv_prop_l2g(daos_prop_t *prop, struct cont_iv_prop *iv_prop)
 		case DAOS_PROP_CO_ROOTS:
 			roots = prop_entry->dpe_val_ptr;
 			if (roots) {
-				memcpy(&iv_prop->cip_roots,
-				       roots, sizeof(*roots));
+				D_MEMCPY(&iv_prop->cip_roots,
+					 roots, sizeof(*roots));
 			}
 			break;
 		case DAOS_PROP_CO_STATUS:
@@ -355,7 +356,8 @@ cont_iv_prop_ent_create(struct ds_iv_entry *entry, struct ds_iv_key *key)
 	if (iv_entry == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
 
-	memcpy(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf, sizeof(root_hdl));
+	D_MEMCPY(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf,
+		 sizeof(root_hdl));
 
 	uuid_copy(iv_entry->cont_uuid, civ_key->cont_uuid);
 	cont_iv_prop_l2g(prop, &iv_entry->iv_prop);
@@ -385,7 +387,8 @@ cont_iv_ent_fetch(struct ds_iv_entry *entry, struct ds_iv_key *key,
 
 	D_ASSERT(dss_get_module_info()->dmi_xs_id == 0);
 
-	memcpy(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf, sizeof(root_hdl));
+	D_MEMCPY(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf,
+		 sizeof(root_hdl));
 
 	d_iov_set(&key_iov, &civ_key->cont_uuid, sizeof(civ_key->cont_uuid));
 	d_iov_set(&val_iov, NULL, 0);
@@ -508,7 +511,8 @@ cont_iv_ent_update(struct ds_iv_entry *entry, struct ds_iv_key *key,
 		}
 	}
 
-	memcpy(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf, sizeof(root_hdl));
+	D_MEMCPY(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf,
+		 sizeof(root_hdl));
 	d_iov_set(&key_iov, &civ_key->cont_uuid, sizeof(civ_key->cont_uuid));
 	if (src == NULL) {
 		/* If src == NULL, it is invalidate */
@@ -598,7 +602,8 @@ cont_iv_ent_valid(struct ds_iv_entry *entry, struct ds_iv_key *key)
 		return false;
 
 	/* Let's check whether the container really exist */
-	memcpy(&root_hdl, entry->iv_value.sg_iovs[0].iov_buf, sizeof(root_hdl));
+	D_MEMCPY(&root_hdl, entry->iv_value.sg_iovs[1].iov_buf,
+		 sizeof(root_hdl));
 	d_iov_set(&key_iov, &civ_key->cont_uuid, sizeof(civ_key->cont_uuid));
 	d_iov_set(&val_iov, NULL, 0);
 	rc = dbtree_lookup(root_hdl, &key_iov, &val_iov);
@@ -658,7 +663,7 @@ cont_iv_update(void *ns, int class_id, uuid_t key_uuid,
 {
 	d_sg_list_t		sgl;
 	d_iov_t			iov;
-	struct ds_iv_key	key;
+	struct ds_iv_key	key = {0};
 	struct cont_iv_key	*civ_key;
 	int			rc;
 
@@ -669,7 +674,6 @@ cont_iv_update(void *ns, int class_id, uuid_t key_uuid,
 	sgl.sg_nr_out = 0;
 	sgl.sg_iovs = &iov;
 
-	memset(&key, 0, sizeof(key));
 	key.class_id = class_id;
 	civ_key = key2priv(&key);
 	uuid_copy(civ_key->cont_uuid, key_uuid);
@@ -741,8 +745,9 @@ retry:
 	if (*snapshots == NULL)
 		D_GOTO(free, rc = -DER_NOMEM);
 
-	memcpy(*snapshots, iv_entry->iv_snap.snaps,
-	       sizeof(iv_entry->iv_snap.snaps[0]) * iv_entry->iv_snap.snap_cnt);
+	D_MEMCPY(*snapshots, iv_entry->iv_snap.snaps,
+		 sizeof(iv_entry->iv_snap.snaps[0]) *
+		 iv_entry->iv_snap.snap_cnt);
 	*snap_count = iv_entry->iv_snap.snap_cnt;
 
 free:
@@ -768,8 +773,8 @@ cont_iv_snapshots_update(void *ns, uuid_t cont_uuid, uint64_t *snapshots,
 
 	uuid_copy(iv_entry->cont_uuid, cont_uuid);
 	iv_entry->iv_snap.snap_cnt = snap_count;
-	memcpy(iv_entry->iv_snap.snaps, snapshots,
-	       sizeof(*snapshots) * snap_count);
+	D_MEMCPY(iv_entry->iv_snap.snaps, snapshots,
+		 sizeof(*snapshots) * snap_count);
 
 	rc = cont_iv_update(ns, IV_CONT_SNAP, cont_uuid, iv_entry,
 			    iv_entry_size, CRT_IV_SHORTCUT_TO_ROOT,
@@ -1093,7 +1098,8 @@ cont_iv_prop_g2l(struct cont_iv_prop *iv_prop, daos_prop_t *prop)
 			D_ALLOC(prop_entry->dpe_val_ptr, sizeof(*roots));
 			if (!prop_entry->dpe_val_ptr)
 				D_GOTO(out, rc = -DER_NOMEM);
-			memcpy(prop_entry->dpe_val_ptr, roots, sizeof(*roots));
+			D_MEMCPY(prop_entry->dpe_val_ptr, roots,
+				 sizeof(*roots));
 			break;
 		case DAOS_PROP_CO_STATUS:
 			prop_entry->dpe_val = daos_prop_co_status_2_val(

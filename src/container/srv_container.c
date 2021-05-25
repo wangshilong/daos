@@ -890,7 +890,7 @@ recs_buf_grow(struct recs_buf *buf)
 		D_ALLOC(recs_tmp, recs_size_tmp);
 		if (recs_tmp == NULL)
 			return -DER_NOMEM;
-		memcpy(recs_tmp, buf->rb_recs, buf->rb_recs_size);
+		D_MEMCPY(recs_tmp, buf->rb_recs, buf->rb_recs_size);
 		D_FREE(buf->rb_recs);
 		buf->rb_recs = recs_tmp;
 		buf->rb_recs_size = recs_size_tmp;
@@ -2021,8 +2021,8 @@ cont_prop_read(struct rdb_tx *tx, struct cont *cont, uint64_t bits,
 		D_ALLOC(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf_len);
 		if (prop->dpp_entries[idx].dpe_val_ptr == NULL)
 			D_GOTO(out, rc = -DER_NOMEM);
-		memcpy(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
-		       value.iov_buf_len);
+		D_MEMCPY(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
+			 value.iov_buf_len);
 		idx++;
 	}
 	if (bits & DAOS_CO_QUERY_PROP_OWNER) {
@@ -2099,8 +2099,8 @@ cont_prop_read(struct rdb_tx *tx, struct cont *cont, uint64_t bits,
 		if (prop->dpp_entries[idx].dpe_val_ptr == NULL)
 			D_GOTO(out, rc = -DER_NOMEM);
 
-		memcpy(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
-		       value.iov_len);
+		D_MEMCPY(prop->dpp_entries[idx].dpe_val_ptr, value.iov_buf,
+			 value.iov_len);
 		idx++;
 	}
 	if (bits & DAOS_CO_QUERY_PROP_CO_STATUS) {
@@ -2362,9 +2362,9 @@ cont_query(struct rdb_tx *tx, struct ds_pool_hdl *pool_hdl, struct cont *cont,
 				}
 				break;
 			case DAOS_PROP_CO_ROOTS:
-				if (memcmp(entry->dpe_val_ptr,
-					   iv_entry->dpe_val_ptr,
-					   sizeof(struct daos_prop_co_roots)))
+				if (D_MEMCMP(entry->dpe_val_ptr,
+					     iv_entry->dpe_val_ptr,
+					     sizeof(struct daos_prop_co_roots)))
 					rc = -DER_IO;
 				break;
 

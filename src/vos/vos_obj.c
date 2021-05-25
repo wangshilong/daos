@@ -737,7 +737,7 @@ key_iter_copy(struct vos_obj_iter *oiter, vos_iter_entry_t *ent,
 	D_ASSERT(ent->ie_key.iov_buf != NULL);
 	D_ASSERT(iov_out->iov_buf != NULL);
 
-	memcpy(iov_out->iov_buf, ent->ie_key.iov_buf, ent->ie_key.iov_len);
+	D_MEMCPY(iov_out->iov_buf, ent->ie_key.iov_buf, ent->ie_key.iov_len);
 	iov_out->iov_len = ent->ie_key.iov_len;
 	return 0;
 }
@@ -988,7 +988,7 @@ singv_iter_probe_fetch(struct vos_obj_iter *oiter, dbtree_probe_opc_t opc,
 	if (rc != 0)
 		return rc;
 
-	memset(entry, 0, sizeof(*entry));
+	D_MEMSET(entry, 0, sizeof(*entry));
 	rc = singv_iter_fetch(oiter, entry, NULL);
 	return rc;
 }
@@ -1084,13 +1084,13 @@ singv_iter_probe(struct vos_obj_iter *oiter, daos_anchor_t *anchor)
 	if (rc != 0)
 		return rc;
 
-	memset(&entry, 0, sizeof(entry));
+	D_MEMSET(&entry, 0, sizeof(entry));
 	rc = singv_iter_fetch(oiter, &entry, &tmp);
 	if (rc != 0)
 		return rc;
 
 	if (anchor != NULL) {
-		if (memcmp(anchor, &tmp, sizeof(tmp)) == 0)
+		if (D_MEMCMP(anchor, &tmp, sizeof(tmp)) == 0)
 			return 0;
 
 		D_DEBUG(DB_IO, "Can't find the provided anchor\n");
@@ -1120,7 +1120,7 @@ singv_iter_fetch(struct vos_obj_iter *oiter, vos_iter_entry_t *it_entry,
 	rbund.rb_biov	= &it_entry->ie_biov;
 	rbund.rb_csum	= &it_entry->ie_csum;
 
-	memset(&it_entry->ie_biov, 0, sizeof(it_entry->ie_biov));
+	D_MEMSET(&it_entry->ie_biov, 0, sizeof(it_entry->ie_biov));
 	ci_set_null(rbund.rb_csum);
 
 	rc = dbtree_iter_fetch(oiter->it_hdl, &kiov, &riov, anchor);
@@ -1161,7 +1161,7 @@ singv_iter_next(struct vos_obj_iter *oiter)
 		return -DER_NONEXIST;
 	}
 
-	memset(&entry, 0, sizeof(entry));
+	D_MEMSET(&entry, 0, sizeof(entry));
 	rc = singv_iter_fetch(oiter, &entry, NULL);
 	if (rc != 0)
 		return rc;
@@ -1297,7 +1297,7 @@ recx_iter_fetch(struct vos_obj_iter *oiter, vos_iter_entry_t *it_entry,
 	if (rc != 0)
 		D_GOTO(out, rc);
 
-	memset(it_entry, 0, sizeof(*it_entry));
+	D_MEMSET(it_entry, 0, sizeof(*it_entry));
 
 	ext = &entry.en_sel_ext;
 	it_entry->ie_epoch	 = entry.en_epoch;

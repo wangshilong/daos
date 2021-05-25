@@ -272,7 +272,7 @@ populate_whitelist(struct spdk_env_opts *opts)
 		}
 
 		/* Clear it for the next loop */
-		memset(trid, 0, sizeof(*trid));
+		D_MEMSET(trid, 0, sizeof(*trid));
 	}
 
 	D_FREE(trid);
@@ -632,8 +632,8 @@ load_blobstore(struct bio_xs_context *ctxt, char *bdev_name, uuid_t *bs_uuid,
 	if (bs_uuid == NULL)
 		strncpy(bs_opts.bstype.bstype, "", SPDK_BLOBSTORE_TYPE_LENGTH);
 	else
-		memcpy(bs_opts.bstype.bstype, bs_uuid,
-		       SPDK_BLOBSTORE_TYPE_LENGTH);
+		D_MEMCPY(bs_opts.bstype.bstype, bs_uuid,
+			 SPDK_BLOBSTORE_TYPE_LENGTH);
 
 	if (async) {
 		D_ASSERT(async_cb != NULL);
@@ -943,7 +943,7 @@ create_bio_bdev(struct bio_xs_context *ctxt, const char *bdev_name,
 
 	/* Get the 'bstype' (device ID) of blobstore */
 	bstype = spdk_bs_get_bstype(bs);
-	memcpy(bs_uuid, bstype.bstype, sizeof(bs_uuid));
+	D_MEMCPY(bs_uuid, bstype.bstype, sizeof(bs_uuid));
 	D_DEBUG(DB_MGMT, "%s :"DF_UUID"\n",
 		new_bs ? "Created new blobstore" : "Loaded blobstore",
 		DP_UUID(bs_uuid));

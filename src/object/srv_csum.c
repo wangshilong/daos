@@ -227,11 +227,10 @@ cc_verify_orig_extents(struct csum_context *ctx)
 
 	for (v = 0; v < to_verify_nr; v++) {
 		C_TRACE("(CALC) Verifying original extent\n");
-		uint8_t			 csum[csum_len];
+		uint8_t			 csum[csum_len] = {0};
 		bool			 match;
 		struct to_verify	*verify;
 
-		memset(csum, 0, csum_len);
 		daos_csummer_set_buffer(csummer, csum, csum_len);
 		daos_csummer_reset(csummer);
 		verify = &to_verify[v];
@@ -269,8 +268,8 @@ cc_verify_resize_if_needed(struct csum_context *ctx)
 	if (to_verify == NULL)
 		return -DER_NOMEM;
 
-	memcpy(to_verify, ctx->cc_to_verify,
-	       sizeof(*to_verify) * ctx->cc_to_verify_nr);
+	D_MEMCPY(to_verify, ctx->cc_to_verify,
+		 sizeof(*to_verify) * ctx->cc_to_verify_nr);
 	if (ctx->cc_to_verify != ctx->cc_to_verify_embedded)
 		D_FREE(ctx->cc_to_verify);
 	ctx->cc_to_verify = to_verify;
@@ -389,7 +388,7 @@ set_biov_ranges(struct csum_context *ctx, daos_off_t start_idx)
 	if (!cc_has_biov(ctx))
 		return;
 
-	memset(&ctx->cc_biov_ranges, 0, sizeof(ctx->cc_biov_ranges));
+	D_MEMSET(&ctx->cc_biov_ranges, 0, sizeof(ctx->cc_biov_ranges));
 	if (!cc_has_biov(ctx))
 		return;
 
@@ -472,7 +471,7 @@ cc_create(struct csum_context *ctx)
 	C_TRACE("(CALC) Starting new checksum for recx idx: %lu\n",
 		ctx->cc_cur_recx_idx);
 	/** Setup csum to start updating */
-	memset(csum, 0, ctx->cc_csum_len);
+	D_MEMSET(csum, 0, ctx->cc_csum_len);
 	daos_csummer_set_buffer(ctx->cc_csummer, csum, ctx->cc_csum_len);
 	daos_csummer_reset(ctx->cc_csummer);
 

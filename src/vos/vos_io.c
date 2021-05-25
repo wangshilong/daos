@@ -129,7 +129,7 @@ dedup_key_cmp(struct d_hash_table *htable, d_list_t *rlink,
 	D_ASSERT(csum->cs_csum != NULL);
 	D_ASSERT(entry->de_csum_buf != NULL);
 
-	return memcmp(entry->de_csum_buf, csum->cs_csum, csum_len) == 0;
+	return D_MEMCMP(entry->de_csum_buf, csum->cs_csum, csum_len) == 0;
 }
 
 static uint32_t
@@ -277,7 +277,7 @@ vos_dedup_update(struct vos_pool *pool, struct dcs_csum_info *csum,
 	entry->de_csum_type	= csum->cs_type;
 	entry->de_addr		= biov->bi_addr;
 	entry->de_data_len	= biov->bi_data_len;
-	memcpy(entry->de_csum_buf, csum->cs_csum, csum_len);
+	D_MEMCPY(entry->de_csum_buf, csum->cs_csum, csum_len);
 
 	d_list_add_tail(&entry->de_link, list);
 	D_DEBUG(DB_IO, "Inserted dedup entry in list\n");
@@ -670,7 +670,7 @@ akey_fetch_single(daos_handle_t toh, const daos_epoch_range_t *epr,
 	struct vos_rec_bundle	 rbund;
 	d_iov_t			 kiov; /* iov to carry key bundle */
 	d_iov_t			 riov; /* iov to carry record bundle */
-	struct bio_iov		 biov; /* iov to return data buffer */
+	struct bio_iov		 biov = {0}; /* iov to return data buffer */
 	int			 rc;
 	struct dcs_csum_info	csum_info = {0};
 
@@ -679,7 +679,6 @@ akey_fetch_single(daos_handle_t toh, const daos_epoch_range_t *epr,
 	key.sk_minor_epc = VOS_MINOR_EPC_MAX;
 
 	tree_rec_bundle2iov(&rbund, &riov);
-	memset(&biov, 0, sizeof(biov));
 	rbund.rb_biov	= &biov;
 	rbund.rb_csum = &csum_info;
 
@@ -721,7 +720,7 @@ out:
 static inline void
 biov_set_hole(struct bio_iov *biov, ssize_t len)
 {
-	memset(biov, 0, sizeof(*biov));
+	D_MEMSET(biov, 0, sizeof(*biov));
 	bio_iov_set_len(biov, len);
 	bio_addr_set_hole(&biov->bi_addr, 1);
 }
@@ -1443,13 +1442,12 @@ akey_update_recx(daos_handle_t toh, uint32_t pm_ver, daos_recx_t *recx,
 		 struct dcs_csum_info *csum, daos_size_t rsize,
 		 struct vos_io_context *ioc, uint16_t minor_epc)
 {
-	struct evt_entry_in	 ent;
+	struct evt_entry_in	 ent = {0};
 	struct bio_iov		*biov;
 	daos_epoch_t		 epoch = ioc->ic_epr.epr_hi;
 	int rc;
 
 	D_ASSERT(recx->rx_nr > 0);
-	memset(&ent, 0, sizeof(ent));
 	ent.ei_bound = ioc->ic_bound;
 	ent.ei_rect.rc_epc = epoch;
 	ent.ei_rect.rc_ex.ex_lo = recx->rx_idx;
@@ -1779,7 +1777,7 @@ vos_reserve_single(struct vos_io_context *ioc, uint16_t media,
 	struct vos_irec_df	*irec;
 	daos_size_t		 scm_size;
 	umem_off_t		 umoff;
-	struct bio_iov		 biov;
+	struct bio_iov		 biov = {0};
 	uint64_t		 off = 0;
 	int			 rc;
 	struct dcs_csum_info	*value_csum = vos_ioc2csum(ioc);
@@ -1807,7 +1805,6 @@ vos_reserve_single(struct vos_io_context *ioc, uint16_t media,
 	irec = (struct vos_irec_df *)umem_off2ptr(vos_ioc2umm(ioc), umoff);
 	vos_irec_init_csum(irec, value_csum);
 
-	memset(&biov, 0, sizeof(biov));
 	if (size == 0) { /* punch */
 		bio_addr_set_hole(&biov.bi_addr, 1);
 		goto done;
@@ -1840,11 +1837,10 @@ static int
 vos_reserve_recx(struct vos_io_context *ioc, uint16_t media, daos_size_t size,
 		 struct dcs_csum_info *csum, daos_size_t csum_len)
 {
-	struct bio_iov	biov;
+	struct bio_iov	biov = {0};
 	uint64_t	off = 0;
 	int		rc;
 
-	memset(&biov, 0, sizeof(biov));
 	/* recx punch */
 	if (size == 0 || media != DAOS_MEDIA_SCM) {
 		ioc->ic_umoffs[ioc->ic_umoffs_cnt] = UMOFF_NULL;
@@ -1865,7 +1861,7 @@ vos_reserve_recx(struct vos_io_context *ioc, uint16_t media, daos_size_t size,
 			ioc->ic_umoffs_cnt++;
 			return iod_reserve(ioc, &biov);
 		}
-		memset(&biov, 0, sizeof(biov));
+		D_MEMSET(&biov, 0, sizeof(biov));
 	}
 
 	/*
@@ -2158,9 +2154,9 @@ vos_check_akeys(int iod_nr, daos_iod_t *iods)
 			    iods[j].iod_name.iov_buf == NULL)
 				continue;
 
-			if (memcmp(iods[i].iod_name.iov_buf,
-				   iods[j].iod_name.iov_buf,
-				   iods[i].iod_name.iov_len) == 0)
+			if (D_MEMCMP(iods[i].iod_name.iov_buf,
+				     iods[j].iod_name.iov_buf,
+				     iods[i].iod_name.iov_len) == 0)
 				return -DER_NO_PERM;
 		}
 	}

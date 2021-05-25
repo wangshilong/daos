@@ -48,8 +48,10 @@
 	ACTION(DB_ANY,   any,   any,   0, arg)  \
 	/** Extremely verbose debug stream */   \
 	ACTION(DB_TRACE, trace, trace, 0, arg)  \
-	/** Memory operations */                \
+	/** Memory allocation operations */     \
 	ACTION(DB_MEM,   mem,   mem,   0, arg)  \
+	/** Memory manipulation operations */   \
+	ACTION(DB_MOP,   mop,   mop,   0, arg)  \
 	/** Network operations */               \
 	ACTION(DB_NET,   net,   net,   0, arg)  \
 	/** I/O operations */                   \

@@ -169,7 +169,7 @@ struct obj_reasb_req {
 static inline void
 enum_anchor_copy(daos_anchor_t *dst, daos_anchor_t *src)
 {
-	memcpy(dst, src, sizeof(*dst));
+	D_MEMCPY(dst, src, sizeof(*dst));
 }
 
 extern struct dss_module_key obj_module_key;

@@ -118,9 +118,9 @@ dc_callback(void *pCallbackTag, CpaStatus status)
 		    produced > 0 &&
 		    produced <= cb_data->dstLen) {
 			/* Copy output from pinned-mem to virtual-mem */
-			memcpy(cb_data->dst,
-			       cb_data->pBufferListDst->pBuffers->pData,
-			       produced);
+			D_MEMCPY(cb_data->dst,
+				 cb_data->pBufferListDst->pBuffers->pData,
+				 produced);
 		} else {
 			produced = 0;
 			if (status == CPA_DC_OVERFLOW)
@@ -378,7 +378,7 @@ qat_dc_compress_async(
 
 	if (status == CPA_STATUS_SUCCESS) {
 		/* Copy source into buffer */
-		memcpy(pSrcBuffer, src, srcLen);
+		D_MEMCPY(pSrcBuffer, src, srcLen);
 
 		/* Build source bufferList */
 		pFlatBuffer = (CpaFlatBuffer *)(pBufferListSrc + 1);

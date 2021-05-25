@@ -139,7 +139,7 @@ rdb_raft_clone_ae(const msg_appendentries_t *ae, msg_appendentries_t *ae_new)
 			rdb_raft_fini_ae(ae_new);
 			return -DER_NOMEM;
 		}
-		memcpy(e_new->data.buf, e->data.buf, e_new->data.len);
+		D_MEMCPY(e_new->data.buf, e->data.buf, e_new->data.len);
 	}
 	return 0;
 }
@@ -622,7 +622,7 @@ rdb_raft_recv_is(struct rdb *db, crt_rpc_t *rpc, d_iov_t *kds,
 	arg.drb_rc = 0;
 
 	/* Transfer the data. */
-	memset(&kds_desc, 0, sizeof(kds_desc));
+	D_MEMSET(&kds_desc, 0, sizeof(kds_desc));
 	kds_desc.bd_rpc = rpc;
 	kds_desc.bd_bulk_op = CRT_BULK_GET;
 	kds_desc.bd_remote_hdl = in->isi_kds;
@@ -632,7 +632,7 @@ rdb_raft_recv_is(struct rdb *db, crt_rpc_t *rpc, d_iov_t *kds,
 			       &kds_opid);
 	if (rc != 0)
 		goto out_eventual;
-	memset(&data_desc, 0, sizeof(data_desc));
+	D_MEMSET(&data_desc, 0, sizeof(data_desc));
 	data_desc.bd_rpc = rpc;
 	data_desc.bd_bulk_op = CRT_BULK_GET;
 	data_desc.bd_remote_hdl = in->isi_data;
@@ -1565,8 +1565,8 @@ rdb_raft_dequeue_event(struct rdb *db, struct rdb_raft_event *event)
 	*event = db->d_events[0];
 	db->d_nevents--;
 	if (db->d_nevents > 0)
-		memmove(&db->d_events[0], &db->d_events[1],
-			sizeof(db->d_events[0]) * db->d_nevents);
+		D_MEMMOVE(&db->d_events[0], &db->d_events[1],
+			  sizeof(db->d_events[0]) * db->d_nevents);
 }
 
 static void
@@ -1805,7 +1805,8 @@ rdb_raft_result_key_cmp(struct d_hash_table *htable, d_list_t *rlink,
 	struct rdb_raft_result *result = rdb_raft_result_obj(rlink);
 
 	D_ASSERTF(ksize == sizeof(result->drr_index), "%u\n", ksize);
-	return memcmp(&result->drr_index, key, sizeof(result->drr_index)) == 0;
+	return D_MEMCMP(&result->drr_index, key,
+			sizeof(result->drr_index)) == 0;
 }
 
 static d_hash_table_ops_t rdb_raft_result_hash_ops = {

@@ -2016,7 +2016,7 @@ crt_grp_config_psr_load(struct crt_grp_priv *grp_priv, d_rank_t psr_rank)
 	if (grpname == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
 
-	snprintf(fmt, 64, "%%*s%%%ds", CRT_GROUP_ID_MAX_LEN);
+	snprintf(fmt, sizeof(fmt), "%%*s%%%ds", CRT_GROUP_ID_MAX_LEN);
 	rc = fscanf(fp, fmt, grpname);
 	if (rc == EOF) {
 		D_ERROR("read from file %s failed (%s).\n",
@@ -2049,8 +2049,8 @@ crt_grp_config_psr_load(struct crt_grp_priv *grp_priv, d_rank_t psr_rank)
 	if (addr_str == NULL)
 		D_GOTO(out, rc = -DER_NOMEM);
 
-	memset(fmt, 0, 64);
-	snprintf(fmt, 64, "%%d %%%ds", CRT_ADDR_STR_MAX_LEN);
+	D_MEMSET(fmt, 0, sizeof(fmt));
+	snprintf(fmt, sizeof(fmt), "%%d %%%ds", CRT_ADDR_STR_MAX_LEN);
 	rc = -DER_INVAL;
 
 	while (1) {
@@ -2152,8 +2152,8 @@ crt_register_event_cb(crt_event_cb func, void *args)
 	}
 
 	if (i > 0)
-		memcpy(cbs_event, crt_plugin_gdata.cpg_event_cbs_old,
-		       i * sizeof(*cbs_event));
+		D_MEMCPY(cbs_event, crt_plugin_gdata.cpg_event_cbs_old,
+			 i * sizeof(*cbs_event));
 	cbs_event[i].cecp_args = args;
 	cbs_event[i].cecp_func = func;
 

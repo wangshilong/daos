@@ -419,7 +419,7 @@ btr_hkey_gen(struct btr_context *tcx, d_iov_t *key, void *hkey)
 		 * this is a little nicer to read.
 		 */
 		*(uint64_t *)hkey = 0;
-		memcpy(hkey, key->iov_buf, key->iov_len);
+		D_MEMCPY(hkey, key->iov_buf, key->iov_len);
 		return;
 	}
 	btr_ops(tcx)->to_hkey_gen(&tcx->tc_tins, key, hkey);
@@ -428,7 +428,7 @@ btr_hkey_gen(struct btr_context *tcx, d_iov_t *key, void *hkey)
 static void
 btr_hkey_copy(struct btr_context *tcx, char *dst_key, char *src_key)
 {
-	memcpy(dst_key, src_key, btr_hkey_size(tcx));
+	D_MEMCPY(dst_key, src_key, btr_hkey_size(tcx));
 }
 
 static int
@@ -447,7 +447,7 @@ btr_hkey_cmp(struct btr_context *tcx, struct btr_record *rec, void *hkey)
 		return btr_ops(tcx)->to_hkey_cmp(&tcx->tc_tins, rec, hkey);
 	else
 		return dbtree_key_cmp_rc(
-			memcmp(&rec->rec_hkey[0], hkey, btr_hkey_size(tcx)));
+			D_MEMCMP(&rec->rec_hkey[0], hkey, btr_hkey_size(tcx)));
 }
 
 static void
@@ -560,14 +560,14 @@ static void
 btr_rec_copy(struct btr_context *tcx, struct btr_record *dst_rec,
 	     struct btr_record *src_rec, int rec_nr)
 {
-	memcpy(dst_rec, src_rec, rec_nr * btr_rec_size(tcx));
+	D_MEMCPY(dst_rec, src_rec, rec_nr * btr_rec_size(tcx));
 }
 
 static void
 btr_rec_move(struct btr_context *tcx, struct btr_record *dst_rec,
 	     struct btr_record *src_rec, int rec_nr)
 {
-	memmove(dst_rec, src_rec, rec_nr * btr_rec_size(tcx));
+	D_MEMMOVE(dst_rec, src_rec, rec_nr * btr_rec_size(tcx));
 }
 
 static void
@@ -732,7 +732,7 @@ btr_root_free(struct btr_context *tcx)
 		if (btr_has_tx(tcx))
 			btr_root_tx_add(tcx);
 
-		memset(root, 0, sizeof(*root));
+		D_MEMSET(root, 0, sizeof(*root));
 	} else {
 		D_DEBUG(DB_TRACE, "Destroy tree root\n");
 		rc = umem_free(btr_umm(tcx), tins->ti_root_off);
@@ -764,7 +764,7 @@ btr_root_init(struct btr_context *tcx, struct btr_root *root, bool in_place)
 	}
 
 	if (in_place)
-		memset(root, 0, sizeof(*root));
+		D_MEMSET(root, 0, sizeof(*root));
 	root->tr_class		= tcx->tc_class;
 	root->tr_feats		= tcx->tc_feats;
 	root->tr_order		= tcx->tc_order;
@@ -1219,7 +1219,7 @@ btr_root_resize(struct btr_context *tcx, struct btr_trace *trace,
 		return rc;
 	}
 	trace->tr_node = root->tr_node = nd_off;
-	memcpy(btr_off2ptr(tcx, nd_off), nd, old_size);
+	D_MEMCPY(btr_off2ptr(tcx, nd_off), nd, old_size);
 	/* NB: Both of the following routines can fail but neither presently
 	 * returns an error code.   For now, ignore this fact.   DAOS-2577
 	 */
@@ -1339,8 +1339,8 @@ btr_probe(struct btr_context *tcx, dbtree_probe_opc_t probe_opc,
 		goto out;
 	}
 
-	memset(&tcx->tc_traces[0], 0,
-	       sizeof(tcx->tc_traces[0]) * BTR_TRACE_MAX);
+	D_MEMSET(&tcx->tc_traces[0], 0,
+		 sizeof(tcx->tc_traces[0]) * BTR_TRACE_MAX);
 
 	/* depth could be changed by dbtree_delete/dbtree_iter_delete from
 	 * a different btr_context, so we always reinitialize both depth
@@ -1521,8 +1521,8 @@ again:
 
 		/* backup the probe trace because probe_next will change it */
 		if (trace == NULL)
-			memcpy(traces, tcx->tc_trace,
-			       sizeof(*trace) * tcx->tc_depth);
+			D_MEMCPY(traces, tcx->tc_trace,
+				 sizeof(*trace) * tcx->tc_depth);
 
 		if (btr_probe_next(tcx)) {
 			trace = traces;
@@ -2868,7 +2868,7 @@ btr_tree_stat(struct btr_context *tcx, struct btr_stat *stat)
 {
 	struct btr_root *root;
 
-	memset(stat, 0, sizeof(*stat));
+	D_MEMSET(stat, 0, sizeof(*stat));
 
 	root = tcx->tc_tins.ti_root;
 	if (!UMOFF_IS_NULL(root->tr_node)) {
@@ -3788,7 +3788,7 @@ btr_class_init(umem_off_t root_off, struct btr_root *root,
 	uint64_t		 special_feat;
 	int			 rc;
 
-	memset(tins, 0, sizeof(*tins));
+	D_MEMSET(tins, 0, sizeof(*tins));
 	rc = umem_class_init(uma, &tins->ti_umm);
 	if (rc != 0)
 		return rc;

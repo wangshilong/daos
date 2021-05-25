@@ -535,7 +535,7 @@ vos_ilog_aggregate(daos_handle_t coh, struct ilog_df *ilog,
 void
 vos_ilog_fetch_init(struct vos_ilog_info *info)
 {
-	memset(info, 0, sizeof(*info));
+	D_MEMSET(info, 0, sizeof(*info));
 	ilog_fetch_init(&info->ii_entries);
 }
 

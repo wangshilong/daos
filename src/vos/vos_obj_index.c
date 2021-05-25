@@ -54,7 +54,7 @@ oi_hkey_gen(struct btr_instance *tins, d_iov_t *key_iov, void *hkey)
 {
 	D_ASSERT(key_iov->iov_len == sizeof(daos_unit_oid_t));
 
-	memcpy(hkey, key_iov->iov_buf, sizeof(daos_unit_oid_t));
+	D_MEMCPY(hkey, key_iov->iov_buf, sizeof(daos_unit_oid_t));
 }
 
 static int
@@ -63,7 +63,7 @@ oi_hkey_cmp(struct btr_instance *tins, struct btr_record *rec, void *hkey)
 	daos_unit_oid_t	*oid1 = (daos_unit_oid_t *)&rec->rec_hkey[0];
 	daos_unit_oid_t	*oid2 = (daos_unit_oid_t *)hkey;
 
-	return dbtree_key_cmp_rc(memcmp(oid1, oid2, sizeof(*oid1)));
+	return dbtree_key_cmp_rc(D_MEMCMP(oid1, oid2, sizeof(*oid1)));
 }
 
 static int

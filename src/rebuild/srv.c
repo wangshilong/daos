@@ -262,7 +262,7 @@ rebuild_status_completed_update(const uuid_t pool_uuid,
 	if (rs_inlist != NULL) {
 		/* ignore the older version as IV update/refresh in async */
 		if (rs->rs_version >= rs_inlist->rs_version)
-			memcpy(rs_inlist, rs, sizeof(*rs));
+			D_MEMCPY(rs_inlist, rs, sizeof(*rs));
 		return 0;
 	}
 
@@ -271,7 +271,7 @@ rebuild_status_completed_update(const uuid_t pool_uuid,
 		return -DER_NOMEM;
 
 	uuid_copy(rsc->rsc_pool_uuid, pool_uuid);
-	memcpy(&rsc->rsc_status, rs, sizeof(*rs));
+	D_MEMCPY(&rsc->rsc_status, rs, sizeof(*rs));
 	d_list_add(&rsc->rsc_list, &rebuild_gst.rg_completed_list);
 	return 0;
 }
@@ -443,17 +443,17 @@ ds_rebuild_query(uuid_t pool_uuid, struct daos_rebuild_status *status)
 	struct daos_rebuild_status		*rs_inlist;
 	int					rc = 0;
 
-	memset(status, 0, sizeof(*status));
+	D_MEMSET(status, 0, sizeof(*status));
 
 	rgt = rebuild_global_pool_tracker_lookup(pool_uuid, -1);
 	if (rgt == NULL) {
 		rs_inlist = rebuild_status_completed_lookup(pool_uuid);
 		if (rs_inlist != NULL)
-			memcpy(status, rs_inlist, sizeof(*status));
+			D_MEMCPY(status, rs_inlist, sizeof(*status));
 		else
 			status->rs_done = 1;
 	} else {
-		memcpy(status, &rgt->rgt_status, sizeof(*status));
+		D_MEMCPY(status, &rgt->rgt_status, sizeof(*status));
 		status->rs_version = rgt->rgt_rebuild_ver;
 		rgt_put(rgt);
 	}
@@ -1113,7 +1113,7 @@ re_dist:
 		 * the leader upgrade group version during this time, let's
 		 * retry in this case.
 		 */
-		memset(&map_buf_iov, 0, sizeof(map_buf_iov));
+		D_MEMSET(&map_buf_iov, 0, sizeof(map_buf_iov));
 		if (rc == -DER_GRPVER) {
 			D_DEBUG(DB_REBUILD, DF_UUID" redistribute pool map\n",
 				DP_UUID(pool->sp_uuid));
@@ -1871,11 +1871,11 @@ rebuild_tgt_status_check_ult(void *arg)
 	}
 
 	while (1) {
-		struct rebuild_iv		iv;
+		struct rebuild_iv		iv = {0};
 		struct rebuild_tgt_query_info	status;
 		int				rc;
 
-		memset(&status, 0, sizeof(status));
+		D_MEMSET(&status, 0, sizeof(status));
 		rc = ABT_mutex_create(&status.lock);
 		if (rc != ABT_SUCCESS)
 			break;
@@ -1891,7 +1891,6 @@ rebuild_tgt_status_check_ult(void *arg)
 				rpt->rt_errno = status.status;
 		}
 
-		memset(&iv, 0, sizeof(iv));
 		uuid_copy(iv.riv_pool_uuid, rpt->rt_pool_uuid);
 
 		/* rebuild_tgt_query above possibly lost some counter

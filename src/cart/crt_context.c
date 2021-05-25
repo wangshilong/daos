@@ -1460,8 +1460,8 @@ crt_register_progress_cb(crt_progress_cb func, int ctx_idx, void *args)
 	}
 
 	if (i > 0)
-		memcpy(cbs_prog, crt_plugin_gdata.cpg_prog_cbs_old[ctx_idx],
-		       i * sizeof(*cbs_prog));
+		D_MEMCPY(cbs_prog, crt_plugin_gdata.cpg_prog_cbs_old[ctx_idx],
+			 i * sizeof(*cbs_prog));
 	cbs_prog[i].cpcp_args = args;
 	cbs_prog[i].cpcp_func = func;
 
@@ -1552,8 +1552,8 @@ crt_register_timeout_cb(crt_timeout_cb func, void *args)
 	}
 
 	if (i > 0)
-		memcpy(cbs_timeout, crt_plugin_gdata.cpg_timeout_cbs_old,
-		       i * sizeof(*cbs_timeout));
+		D_MEMCPY(cbs_timeout, crt_plugin_gdata.cpg_timeout_cbs_old,
+			 i * sizeof(*cbs_timeout));
 	cbs_timeout[i].ctcp_args = args;
 	cbs_timeout[i].ctcp_func = func;
 

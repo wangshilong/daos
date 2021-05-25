@@ -29,8 +29,8 @@ dc_obj_verify_list(struct dc_obj_verify_args *dova)
 
 	D_ASSERT(!dova->eof);
 
-	memset(dova->kds, 0, sizeof(daos_key_desc_t) * DOVA_NUM);
-	memset(dova->list_buf, 0, dova->list_buf_len);
+	D_MEMSET(dova->kds, 0, sizeof(daos_key_desc_t) * DOVA_NUM);
+	D_MEMSET(dova->list_buf, 0, dova->list_buf_len);
 
 	dova->list_sgl.sg_nr = 1;
 	dova->list_sgl.sg_nr_out = 1;
@@ -316,7 +316,7 @@ dc_obj_verify_parse_sv(struct dc_obj_verify_args *dova, daos_obj_id_t oid,
 				return -DER_NOMEM;
 		}
 
-		memcpy(dova->fetch_buf, data, size);
+		D_MEMCPY(dova->fetch_buf, data, size);
 		dova->fetch_iov.iov_len = size;
 		dova->fetch_iov.iov_buf = dova->fetch_buf;
 		dova->fetch_iov.iov_buf_len = dova->fetch_buf_len;
@@ -451,7 +451,7 @@ dc_obj_verify_move_cursor(struct dc_obj_verify_args *dova, daos_obj_id_t oid)
 
 	iod->iod_type = DAOS_IOD_NONE;
 	iod->iod_size = DAOS_SIZE_MAX;
-	memset(iod->iod_recxs, 0, sizeof(*iod->iod_recxs));
+	D_MEMSET(iod->iod_recxs, 0, sizeof(*iod->iod_recxs));
 	cursor->type = OBJ_ITER_NONE;
 	if (cursor->kds_idx == dova->num) {
 		if (dova->eof)
@@ -619,8 +619,8 @@ dc_obj_verify_cmp(struct dc_obj_verify_args *dova_a,
 		return -DER_MISMATCH;
 	}
 
-	if (memcmp(dova_a->fetch_iov.iov_buf, dova_b->fetch_iov.iov_buf,
-		   dova_a->fetch_iov.iov_len) != 0) {
+	if (D_MEMCMP(dova_a->fetch_iov.iov_buf, dova_b->fetch_iov.iov_buf,
+		     dova_a->fetch_iov.iov_len) != 0) {
 		D_INFO(DF_OID" (reps %u, inconsistent) "
 		       "type %u, shard %u and shard %u have "
 		       "different data, size %lu.\n",
@@ -651,9 +651,9 @@ dc_obj_verify_rdg(struct dc_object *obj, struct dc_obj_verify_args *dova,
 	for (i = 0; i < reps; i++) {
 		struct dc_obj_verify_cursor	*cursor = &dova[i].cursor;
 
-		memset(&dova[i].anchor, 0, sizeof(dova[i].anchor));
-		memset(&dova[i].dkey_anchor, 0, sizeof(dova[i].dkey_anchor));
-		memset(&dova[i].akey_anchor, 0, sizeof(dova[i].akey_anchor));
+		D_MEMSET(&dova[i].anchor, 0, sizeof(dova[i].anchor));
+		D_MEMSET(&dova[i].dkey_anchor, 0, sizeof(dova[i].dkey_anchor));
+		D_MEMSET(&dova[i].akey_anchor, 0, sizeof(dova[i].akey_anchor));
 		dc_obj_shard2anchor(&dova[i].dkey_anchor, start + i);
 		daos_anchor_set_flags(&dova[i].dkey_anchor,
 				DIOF_TO_SPEC_SHARD | DIOF_WITH_SPEC_EPOCH);
@@ -662,7 +662,7 @@ dc_obj_verify_rdg(struct dc_object *obj, struct dc_obj_verify_args *dova,
 		dova[i].eof = 0;
 		dova[i].non_exist = 0;
 
-		memset(cursor, 0, sizeof(*cursor));
+		D_MEMSET(cursor, 0, sizeof(*cursor));
 		/* We merge the recxs if they can be merged.
 		 * So always single IOD.
 		 */

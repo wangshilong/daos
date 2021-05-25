@@ -471,7 +471,7 @@ dtx_iter_cb(uuid_t co_uuid, vos_iter_entry_t *ent, void *args)
 	mbs->dm_data_size = ent->ie_dtx_mbs_dsize;
 	mbs->dm_flags = ent->ie_dtx_mbs_flags;
 	mbs->dm_dte_flags = ent->ie_dtx_flags;
-	memcpy(mbs->dm_data, ent->ie_dtx_mbs, ent->ie_dtx_mbs_dsize);
+	D_MEMCPY(mbs->dm_data, ent->ie_dtx_mbs, ent->ie_dtx_mbs_dsize);
 
 	dte->dte_xid = ent->ie_dtx_xid;
 	dte->dte_ver = ent->ie_dtx_ver;

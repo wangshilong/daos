@@ -364,7 +364,7 @@ pool_buf_dup(struct pool_buf *buf)
 	if (buf_alloc == NULL)
 		return NULL;
 
-	memcpy(buf_alloc, buf, pool_buf_size(buf->pb_nr));
+	D_MEMCPY(buf_alloc, buf, pool_buf_size(buf->pb_nr));
 
 	return buf_alloc;
 }
@@ -875,7 +875,7 @@ pool_tree_copy(struct pool_domain *dst, struct pool_domain *src)
 {
 	struct pool_comp_cntr	cntr;
 
-	memcpy(dst, src, pool_tree_size(src));
+	D_MEMCPY(dst, src, pool_tree_size(src));
 	pool_tree_count(src, &cntr);
 	pool_tree_build_ptrs(dst, &cntr);
 }
@@ -1249,13 +1249,13 @@ pool_map_merge(struct pool_map *map, uint32_t version,
 					ddom->do_child_nr = cdom->do_child_nr;
 					nb = cdom->do_child_nr *
 					     sizeof(struct pool_domain);
-					memcpy(addr, cdom->do_children, nb);
+					D_MEMCPY(addr, cdom->do_children, nb);
 				} else {
 					ddom->do_targets = addr;
 					ddom->do_target_nr = cdom->do_target_nr;
 					nb = cdom->do_target_nr *
 					     sizeof(struct pool_target);
-					memcpy(addr, cdom->do_targets, nb);
+					D_MEMCPY(addr, cdom->do_targets, nb);
 				}
 				addr += nb;
 				cdom++;
@@ -1478,7 +1478,7 @@ gen_pool_buf(struct pool_map *map, struct pool_buf **map_buf_out,
 	D_ALLOC_ARRAY_NZ(uuids, nnodes);
 	if (uuids == NULL)
 		D_GOTO(out_map_buf, rc = -DER_NOMEM);
-	memcpy(uuids, target_uuids, sizeof(uuid_t) * nnodes);
+	D_MEMCPY(uuids, target_uuids, sizeof(uuid_t) * nnodes);
 	qsort(uuids, nnodes, sizeof(uuid_t), uuid_compare_cb);
 
 	rc = add_domains_to_pool_buf(map, map_buf, map_version, ndomains,
@@ -2191,7 +2191,7 @@ pool_map_update_failed_cnt(struct pool_map *map)
 	struct pool_domain *root;
 	struct pool_fail_comp *fail_cnts = map->po_comp_fail_cnts;
 
-	memset(fail_cnts, 0, sizeof(*fail_cnts) * map->po_domain_layers);
+	D_MEMSET(fail_cnts, 0, sizeof(*fail_cnts) * map->po_domain_layers);
 
 	rc = pool_map_find_domain(map, PO_COMP_TP_ROOT, PO_COMP_ID_ALL, &root);
 	if (rc == 0)
@@ -2239,8 +2239,8 @@ pmap_fail_node_init(struct pmap_fail_node *fnode)
 	fnode->pf_vers = fnode->pf_ver_inline;
 	fnode->pf_ver_total = PMAP_FAIL_INLINE_NR;
 	fnode->pf_ver_nr = 0;
-	memset(fnode->pf_vers, 0,
-	       sizeof(struct pmap_fail_ver) * fnode->pf_ver_total);
+	D_MEMSET(fnode->pf_vers, 0,
+		 sizeof(struct pmap_fail_ver) * fnode->pf_ver_total);
 }
 
 static void
@@ -2264,8 +2264,8 @@ pmap_fail_node_get(struct pmap_fail_stat *fstat)
 		if (fnodes == NULL)
 			return NULL;
 
-		memcpy(fnodes, fstat->pf_nodes,
-		       sizeof(*fnode) * fstat->pf_node_nr);
+		D_MEMCPY(fnodes, fstat->pf_nodes,
+			 sizeof(*fnode) * fstat->pf_node_nr);
 		for (i = 0; i < fstat->pf_node_nr; i++) {
 			fnode = &fstat->pf_nodes[i];
 			if (fnode->pf_vers != fnode->pf_ver_inline) {
@@ -2445,8 +2445,8 @@ pmap_fail_node_add_tgt(struct pmap_fail_stat *fstat,
 		if (fvers == NULL)
 			return -DER_NOMEM;
 
-		memcpy(fvers, fnode->pf_vers,
-		       sizeof(*fvers) * fnode->pf_ver_nr);
+		D_MEMCPY(fvers, fnode->pf_vers,
+			 sizeof(*fvers) * fnode->pf_ver_nr);
 		if (fnode->pf_vers != fnode->pf_ver_inline)
 			D_FREE(fnode->pf_vers);
 		fnode->pf_vers = fvers;

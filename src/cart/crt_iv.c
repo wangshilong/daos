@@ -226,7 +226,7 @@ crt_iv_keys_match(crt_iv_key_t *key1, crt_iv_key_t *key2)
 	if (key1->iov_len != key2->iov_len)
 		return false;
 
-	if (memcmp(key1->iov_buf, key2->iov_buf, key1->iov_len) == 0)
+	if (D_MEMCMP(key1->iov_buf, key2->iov_buf, key1->iov_len) == 0)
 		return true;
 
 	return false;
@@ -289,7 +289,7 @@ crt_ivf_key_in_progress_set(struct crt_ivns_internal *ivns,
 
 	entry->kip_refcnt = 0;
 
-	memcpy(entry->kip_key.iov_buf, key->iov_buf, key->iov_buf_len);
+	D_MEMCPY(entry->kip_key.iov_buf, key->iov_buf, key->iov_buf_len);
 	D_INIT_LIST_HEAD(&entry->kip_pending_fetch_list);
 
 	/* TODO: Change to hash table */
@@ -692,8 +692,8 @@ crt_ivns_internal_create(crt_context_t crt_ctx, struct crt_grp_priv *grp_priv,
 		D_GOTO(exit, ivns_internal = NULL);
 	}
 
-	memcpy(ivns_internal->cii_iv_classes, iv_classes,
-	       sizeof(*iv_classes) * num_class);
+	D_MEMCPY(ivns_internal->cii_iv_classes, iv_classes,
+		 sizeof(*iv_classes) * num_class);
 
 	ivns_internal->cii_gns.gn_num_class = num_class;
 	ivns_internal->cii_gns.gn_tree_topo = tree_topo;
@@ -1390,7 +1390,7 @@ crt_hdlr_iv_fetch_aux(void *arg)
 		put_needed = false;
 
 		/* Reset the iv_value, since it maybe freed in on_put() */
-		memset(&iv_value, 0, sizeof(iv_value));
+		D_MEMSET(&iv_value, 0, sizeof(iv_value));
 		rc = iv_ops->ivo_on_get(ivns_internal, &input->ifi_key,
 					0, CRT_IV_PERM_WRITE, &iv_value,
 					&user_priv);
@@ -2319,8 +2319,8 @@ crt_ivsync_rpc_issue(struct crt_ivns_internal *ivns_internal, uint32_t class_id,
 			D_GOTO(exit, rc = -DER_NOMEM);
 		}
 
-		memcpy(iv_sync_cb->isc_iv_key.iov_buf, iv_key->iov_buf,
-		       iv_key->iov_buf_len);
+		D_MEMCPY(iv_sync_cb->isc_iv_key.iov_buf, iv_key->iov_buf,
+			 iv_key->iov_buf_len);
 
 		iv_sync_cb->isc_iv_key.iov_buf_len = iv_key->iov_buf_len;
 		iv_sync_cb->isc_iv_key.iov_len = iv_key->iov_len;

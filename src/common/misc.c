@@ -87,16 +87,16 @@ daos_sgls_copy_internal(d_sg_list_t *dst_sgl, uint32_t dst_nr,
 					   src_sgl[i].sg_iovs[j].iov_buf_len);
 					return -DER_INVAL;
 				}
-				memcpy(dst_sgl[i].sg_iovs[j].iov_buf,
-				       src_sgl[i].sg_iovs[j].iov_buf,
-				       src_sgl[i].sg_iovs[j].iov_len);
+				D_MEMCPY(dst_sgl[i].sg_iovs[j].iov_buf,
+					 src_sgl[i].sg_iovs[j].iov_buf,
+					 src_sgl[i].sg_iovs[j].iov_len);
 				dst_sgl[i].sg_iovs[j].iov_len =
 					src_sgl[i].sg_iovs[j].iov_len;
 			}
 		} else {
 			/* only copy the pointer */
-			memcpy(dst_sgl[i].sg_iovs, src_sgl[i].sg_iovs,
-			       num * sizeof(*dst_sgl[i].sg_iovs));
+			D_MEMCPY(dst_sgl[i].sg_iovs, src_sgl[i].sg_iovs,
+				 num * sizeof(*dst_sgl[i].sg_iovs));
 		}
 	}
 	return 0;
@@ -168,8 +168,8 @@ daos_sgl_merge(d_sg_list_t *dst, d_sg_list_t *src)
 		if (new_iovs[i].iov_buf == NULL)
 			D_GOTO(free, rc = -DER_NOMEM);
 
-		memcpy(new_iovs[i].iov_buf, src->sg_iovs[idx].iov_buf,
-		       src->sg_iovs[idx].iov_len);
+		D_MEMCPY(new_iovs[i].iov_buf, src->sg_iovs[idx].iov_buf,
+			 src->sg_iovs[idx].iov_len);
 		new_iovs[i].iov_len = src->sg_iovs[idx].iov_len;
 		new_iovs[i].iov_buf_len = src->sg_iovs[idx].iov_buf_len;
 	}
@@ -381,7 +381,7 @@ daos_iov_copy(d_iov_t *dst, d_iov_t *src)
 	if (dst->iov_buf == NULL)
 		return -DER_NOMEM;
 	dst->iov_buf_len = src->iov_buf_len;
-	memcpy(dst->iov_buf, src->iov_buf, src->iov_len);
+	D_MEMCPY(dst->iov_buf, src->iov_buf, src->iov_len);
 	dst->iov_len = src->iov_len;
 	D_DEBUG(DB_TRACE, "iov_len %d\n", (int)dst->iov_len);
 	return 0;
@@ -393,7 +393,7 @@ daos_iov_alloc(d_iov_t *iov, daos_size_t size, bool set_full)
 	D_ASSERT(iov != NULL);
 	D_ASSERT(size > 0);
 
-	memset(iov, 0, sizeof(*iov));
+	D_MEMSET(iov, 0, sizeof(*iov));
 	D_ALLOC(iov->iov_buf, size);
 	if (iov->iov_buf == NULL)
 		return -DER_NOMEM;
@@ -428,7 +428,7 @@ daos_iov_cmp(d_iov_t *iov1, d_iov_t *iov2)
 	if (iov1->iov_len != iov2->iov_len)
 		return false;
 
-	return !memcmp(iov1->iov_buf, iov2->iov_buf, iov1->iov_len);
+	return !D_MEMCMP(iov1->iov_buf, iov2->iov_buf, iov1->iov_len);
 }
 
 void
@@ -437,7 +437,7 @@ daos_iov_append(d_iov_t *iov, void *buf, uint64_t buf_len)
 	D_ASSERTF(iov->iov_len + buf_len <= iov->iov_buf_len,
 		  "iov->iov_len(%lu) + buf_len(%lu) <= iov->iov_buf_len(%lu)",
 		  iov->iov_len, buf_len, iov->iov_buf_len);
-	memcpy(iov->iov_buf + iov->iov_len, buf, buf_len);
+	D_MEMCPY(iov->iov_buf + iov->iov_len, buf, buf_len);
 	iov->iov_len += buf_len;
 }
 
@@ -469,7 +469,7 @@ daos_rank_list_parse(const char *str, const char *sep)
 			D_ALLOC_ARRAY(buf_new, cap_new);
 			if (buf_new == NULL)
 				D_GOTO(out_s, ranks = NULL);
-			memcpy(buf_new, buf, sizeof(*buf_new) * n);
+			D_MEMCPY(buf_new, buf, sizeof(*buf_new) * n);
 			D_FREE(buf);
 			buf = buf_new;
 			cap = cap_new;
@@ -483,7 +483,7 @@ daos_rank_list_parse(const char *str, const char *sep)
 		ranks = daos_rank_list_alloc(n);
 		if (ranks == NULL)
 			D_GOTO(out_s, ranks = NULL);
-		memcpy(ranks->rl_ranks, buf, sizeof(*buf) * n);
+		D_MEMCPY(ranks->rl_ranks, buf, sizeof(*buf) * n);
 	}
 out_s:
 	D_FREE(s_saved);
@@ -672,7 +672,7 @@ daos_dti_gen(struct dtx_id *dti, bool zero)
 	static __thread uuid_t uuid;
 
 	if (zero) {
-		memset(dti, 0, sizeof(*dti));
+		D_MEMSET(dti, 0, sizeof(*dti));
 	} else {
 		if (uuid_is_null(uuid))
 			uuid_generate(uuid);

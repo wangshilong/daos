@@ -448,7 +448,7 @@ embedded_key_encode(d_iov_t *key, daos_anchor_t *anchor)
 
 	D_ASSERT(key->iov_len <= sizeof(embedded->ek_key));
 
-	memcpy(embedded->ek_key, key->iov_buf, key->iov_len);
+	D_MEMCPY(embedded->ek_key, key->iov_buf, key->iov_len);
 	/** Pointers will have to be set on decode. */
 	embedded->ek_size = key->iov_len;
 }

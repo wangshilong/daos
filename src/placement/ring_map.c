@@ -439,7 +439,8 @@ ring_buf_shuffle(struct pl_ring_map *rimap, unsigned int seed,
 	}
 
 	D_DEBUG(DB_PL, "Copy scratch buffer\n");
-	memcpy(buf->rb_domains, scratch, buf->rb_domain_nr * sizeof(*scratch));
+	D_MEMCPY(buf->rb_domains, scratch,
+		 buf->rb_domain_nr * sizeof(*scratch));
 	D_FREE(scratch);
 	return 0;
 }
@@ -1186,8 +1187,8 @@ ring_obj_find_rebuild(struct pl_map *map, struct daos_obj_md *md,
 		layout = &layout_on_stack;
 		layout->ol_nr = shards_count;
 		layout->ol_shards = shards_on_stack;
-		memset(layout->ol_shards, 0,
-		       sizeof(*layout->ol_shards) * layout->ol_nr);
+		D_MEMSET(layout->ol_shards, 0,
+			 sizeof(*layout->ol_shards) * layout->ol_nr);
 	}
 
 	D_INIT_LIST_HEAD(&remap_list);
@@ -1265,10 +1266,11 @@ ring_obj_find_reint(struct pl_map *map, struct daos_obj_md *md,
 		layout->ol_shards = shards_on_stack;
 		reint_layout->ol_shards = reint_shards_on_stack;
 
-		memset(layout->ol_shards, 0,
-		       sizeof(*layout->ol_shards) * layout->ol_nr);
-		memset(reint_layout->ol_shards, 0,
-		       sizeof(*reint_layout->ol_shards) * reint_layout->ol_nr);
+		D_MEMSET(layout->ol_shards, 0,
+			 sizeof(*layout->ol_shards) * layout->ol_nr);
+		D_MEMSET(reint_layout->ol_shards, 0,
+			 sizeof(*reint_layout->ol_shards) *
+			 reint_layout->ol_nr);
 
 	}
 

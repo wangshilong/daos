@@ -145,7 +145,7 @@ pool_iv_prop_l2g(daos_prop_t *prop, struct pool_iv_prop *iv_prop)
 				iv_prop->pip_acl =
 						(void *)(iv_prop->pip_iv_buf +
 						roundup(offset, 8));
-				memcpy(iv_prop->pip_acl, acl, acl_size);
+				D_MEMCPY(iv_prop->pip_acl, acl, acl_size);
 				offset += roundup(acl_size, 8);
 			}
 			break;
@@ -321,8 +321,8 @@ pool_iv_conn_delete(struct pool_iv_conns *conns, uuid_t hdl_uuid)
 	end = (char *)conns->pic_conns + conns->pic_size;
 	next = pool_iv_conn_next(conn);
 	if (pool_iv_conn_valid(next, end))
-		memmove((char *)conn, (char *)next,
-			(unsigned long)(end - (char *)next));
+		D_MEMMOVE((char *)conn, (char *)next,
+			  (unsigned long)(end - (char *)next));
 	conns->pic_size -= size;
 
 	return 0;
@@ -346,7 +346,7 @@ pool_iv_conn_insert(struct pool_iv_conns *conns, struct pool_iv_conn *new_conn)
 		return -DER_REC2BIG;
 
 	end = (char *)conns->pic_conns + conns->pic_size;
-	memcpy(end, new_conn, new_conn_size);
+	D_MEMCPY(end, new_conn, new_conn_size);
 	conns->pic_size += new_conn_size;
 	D_DEBUG(DB_MD, "insert conn %u/%u\n", conns->pic_size,
 		conns->pic_buf_size);
@@ -394,8 +394,8 @@ pool_iv_conns_ent_fetch(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 		struct pool_iv_entry *dst_iv;
 
 		dst_iv = dst_sgl->sg_iovs[0].iov_buf;
-		memcpy(&dst_iv->piv_conn_hdls, &src_iv->piv_conn_hdls,
-		       sizeof(struct pool_iv_conns));
+		D_MEMCPY(&dst_iv->piv_conn_hdls, &src_iv->piv_conn_hdls,
+			 sizeof(struct pool_iv_conns));
 		return -DER_IVCB_FORWARD;
 	}
 
@@ -454,8 +454,8 @@ pool_iv_conns_ent_update(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 
 		D_DEBUG(DB_MD, "Update -1 entry dst_sgl %p\n", dst_sgl);
 		dst_iv = dst_sgl->sg_iovs[0].iov_buf;
-		memcpy(&dst_iv->piv_conn_hdls, &src_iv->piv_conn_hdls,
-		       sizeof(struct pool_iv_conns));
+		D_MEMCPY(&dst_iv->piv_conn_hdls, &src_iv->piv_conn_hdls,
+			 sizeof(struct pool_iv_conns));
 		return 0;
 	}
 
@@ -491,7 +491,7 @@ pool_iv_ent_init(struct ds_iv_key *iv_key, void *data,
 	if (rc)
 		return rc;
 
-	memcpy(&entry->iv_key, iv_key, sizeof(*iv_key));
+	D_MEMCPY(&entry->iv_key, iv_key, sizeof(*iv_key));
 
 	return rc;
 }
@@ -525,9 +525,9 @@ pool_iv_map_ent_fetch(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 
 	dst_iv = dst_sgl->sg_iovs[0].iov_buf;
 	if (src_iv->piv_map.piv_pool_buf.pb_target_nr == (uint32_t)(-1)) {
-		memcpy(&dst_iv->piv_map.piv_pool_buf,
-		       &src_iv->piv_map.piv_pool_buf,
-		       sizeof(src_iv->piv_map.piv_pool_buf));
+		D_MEMCPY(&dst_iv->piv_map.piv_pool_buf,
+			 &src_iv->piv_map.piv_pool_buf,
+			 sizeof(src_iv->piv_map.piv_pool_buf));
 		return -DER_IVCB_FORWARD;
 	}
 
@@ -538,8 +538,8 @@ pool_iv_map_ent_fetch(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 		  sizeof(struct pool_iv_map) + sizeof(struct pool_buf);
 
 	if (src_pbuf_size >= dst_pbuf_size) {
-		memcpy(&dst_iv->piv_map.piv_pool_buf,
-		       &src_iv->piv_map.piv_pool_buf, src_pbuf_size);
+		D_MEMCPY(&dst_iv->piv_map.piv_pool_buf,
+			 &src_iv->piv_map.piv_pool_buf, src_pbuf_size);
 		dst_sgl->sg_iovs[0].iov_len = pool_iv_map_ent_size(pb_nr);
 		return 0;
 	}
@@ -567,9 +567,9 @@ pool_iv_map_ent_update(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 		/* During fetch aggregation, update/refresh callback might
 		 * be called to store these -1 entry.
 		 **/
-		memcpy(&dst_iv->piv_map.piv_pool_buf,
-		       &src_iv->piv_map.piv_pool_buf,
-		       sizeof(src_iv->piv_map.piv_pool_buf));
+		D_MEMCPY(&dst_iv->piv_map.piv_pool_buf,
+			 &src_iv->piv_map.piv_pool_buf,
+			 sizeof(src_iv->piv_map.piv_pool_buf));
 		return 0;
 	}
 
@@ -592,8 +592,8 @@ pool_iv_map_ent_update(d_sg_list_t *dst_sgl, struct pool_iv_entry *src_iv)
 		dst_iv = new_buf;
 	}
 
-	memcpy(&dst_iv->piv_map.piv_pool_buf,
-	       &src_iv->piv_map.piv_pool_buf, src_pbuf_size);
+	D_MEMCPY(&dst_iv->piv_map.piv_pool_buf, &src_iv->piv_map.piv_pool_buf,
+		 src_pbuf_size);
 
 	return 0;
 }
@@ -937,7 +937,7 @@ pool_iv_map_fetch(void *ns)
 	d_sg_list_t		sgl = { 0 };
 	d_iov_t			iov = { 0 };
 	uint32_t		pool_iv_len = 0;
-	struct ds_iv_key	key;
+	struct ds_iv_key	key = { 0 };
 	struct pool_iv_entry	iv_entry = { 0 };
 	struct pool_iv_key	*pool_key;
 	int			pb_nr = 128; /* Init tgt nr */
@@ -952,7 +952,6 @@ pool_iv_map_fetch(void *ns)
 	sgl.sg_nr_out = 0;
 	sgl.sg_iovs = &iov;
 
-	memset(&key, 0, sizeof(key));
 	key.class_id = IV_POOL_MAP;
 	pool_key = (struct pool_iv_key *)key.key_buf;
 retry:
@@ -982,7 +981,7 @@ pool_iv_update(void *ns, int class_id, uuid_t key_uuid,
 {
 	d_sg_list_t		sgl;
 	d_iov_t			iov;
-	struct ds_iv_key	key;
+	struct ds_iv_key	key = { 0 };
 	struct pool_iv_key	*pool_key;
 	int			rc;
 
@@ -993,7 +992,6 @@ pool_iv_update(void *ns, int class_id, uuid_t key_uuid,
 	sgl.sg_nr_out = 0;
 	sgl.sg_iovs = &iov;
 
-	memset(&key, 0, sizeof(key));
 	key.class_id = class_id;
 	pool_key = (struct pool_iv_key *)key.key_buf;
 	pool_key->pik_entry_size = pool_iv_len;
@@ -1024,7 +1022,8 @@ ds_pool_iv_map_update(struct ds_pool *pool, struct pool_buf *buf,
 
 	crt_group_rank(pool->sp_group, &iv_entry->piv_map.piv_master_rank);
 	iv_entry->piv_map.piv_pool_map_ver = pool->sp_map_version;
-	memcpy(&iv_entry->piv_map.piv_pool_buf, buf, pool_buf_size(buf->pb_nr));
+	D_MEMCPY(&iv_entry->piv_map.piv_pool_buf, buf,
+		 pool_buf_size(buf->pb_nr));
 
 	/* FIXME: Let's update the pool map synchronously for the moment,
 	 * since there is no easy way to free the iv_entry buffer. Needs
@@ -1066,7 +1065,7 @@ ds_pool_iv_conn_hdl_update(struct ds_pool *pool, uuid_t hdl_uuid,
 	pic->pic_flags = flags;
 	pic->pic_capas = sec_capas;
 	pic->pic_cred_size = cred->iov_len;
-	memcpy(&pic->pic_creds[0], cred->iov_buf, cred->iov_len);
+	D_MEMCPY(&pic->pic_creds[0], cred->iov_buf, cred->iov_len);
 
 	rc = pool_iv_update(pool->sp_iv_ns, IV_POOL_CONN, hdl_uuid,
 			    iv_entry, iv_entry_size, CRT_IV_SHORTCUT_NONE,
@@ -1254,7 +1253,7 @@ ds_pool_iv_srv_hdl_fetch(struct ds_pool *pool, uuid_t *pool_hdl_uuid,
 	struct pool_iv_entry	iv_entry = { 0 };
 	d_sg_list_t		sgl = { 0 };
 	d_iov_t			iov = { 0 };
-	struct ds_iv_key	 key;
+	struct ds_iv_key	 key = {0};
 	struct pool_iv_key	*pool_key;
 	int			 rc;
 
@@ -1263,7 +1262,6 @@ ds_pool_iv_srv_hdl_fetch(struct ds_pool *pool, uuid_t *pool_hdl_uuid,
 	sgl.sg_nr_out = 0;
 	sgl.sg_iovs = &iov;
 
-	memset(&key, 0, sizeof(key));
 	key.class_id = IV_POOL_HDL;
 	pool_key = (struct pool_iv_key *)key.key_buf;
 	pool_key->pik_entry_size = sizeof(struct pool_iv_entry);
@@ -1389,10 +1387,9 @@ cont_pool_svc_ult(void *args)
 {
 	struct pool_svc_iv_args	*iv_args = args;
 	struct daos_prop_entry	*entry;
-	daos_prop_t		 prop;
+	daos_prop_t		 prop = {0};
 	int			 rc;
 
-	memset(&prop, 0, sizeof(prop));
 	rc = ds_pool_iv_prop_fetch(iv_args->ia_pool, &prop);
 	if (rc)
 		return rc;
@@ -1443,7 +1440,7 @@ ds_pool_iv_prop_fetch(struct ds_pool *pool, daos_prop_t *prop)
 	uint32_t		 iv_entry_size;
 	d_sg_list_t		 sgl = { 0 };
 	d_iov_t			 iov = { 0 };
-	struct ds_iv_key	 key;
+	struct ds_iv_key	 key = { 0 };
 	struct pool_iv_key	*pool_key;
 	int			 rc;
 
@@ -1461,7 +1458,6 @@ ds_pool_iv_prop_fetch(struct ds_pool *pool, daos_prop_t *prop)
 	sgl.sg_nr_out = 0;
 	sgl.sg_iovs = &iov;
 
-	memset(&key, 0, sizeof(key));
 	key.class_id = IV_POOL_PROP;
 	pool_key = (struct pool_iv_key *)key.key_buf;
 	pool_key->pik_entry_size = iv_entry_size;

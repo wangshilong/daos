@@ -115,7 +115,7 @@ rdb_kvs_alloc_ref(void *key, unsigned int ksize, void *varg,
 	}
 
 	/* kvs->de_path */
-	memcpy(kvs->de_buf, key, ksize);
+	D_MEMCPY(kvs->de_buf, key, ksize);
 	d_iov_set(&kvs->de_path, kvs->de_buf, ksize);
 
 	/* kvs->de_object */
@@ -151,7 +151,7 @@ rdb_kvs_cmp_keys(const void *key, unsigned int ksize, struct daos_llink *llink)
 
 	if (ksize != kvs->de_path.iov_len)
 		return false;
-	if (memcmp(key, kvs->de_path.iov_buf, ksize) != 0)
+	if (D_MEMCMP(key, kvs->de_path.iov_buf, ksize) != 0)
 		return false;
 	return true;
 }

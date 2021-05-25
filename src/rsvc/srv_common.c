@@ -443,8 +443,8 @@ attr_list_iter_cb(daos_handle_t ih, d_iov_t *key, d_iov_t *val, void *arg)
 			i_args->iov_count *= 2;
 		}
 
-		memcpy(&i_args->iovs[i_args->iov_index],
-		       key, sizeof(d_iov_t));
+		D_MEMCPY(&i_args->iovs[i_args->iov_index],
+			 key, sizeof(d_iov_t));
 		i_args->iovs[i_args->iov_index]
 			.iov_buf_len = key->iov_len;
 		i_args->available -= key->iov_len;

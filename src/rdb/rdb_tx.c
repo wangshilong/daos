@@ -335,7 +335,7 @@ rdb_tx_append(struct rdb_tx *tx, struct rdb_tx_op *op)
 		if (new_buf == NULL)
 			return -DER_NOMEM;
 		if (tx->dt_entry_len > 0)
-			memcpy(new_buf, tx->dt_entry, tx->dt_entry_len);
+			D_MEMCPY(new_buf, tx->dt_entry, tx->dt_entry_len);
 		if (tx->dt_entry != NULL)
 			D_FREE(tx->dt_entry);
 		tx->dt_entry = new_buf;

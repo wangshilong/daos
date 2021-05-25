@@ -690,11 +690,11 @@ crt_corpc_reply_hdlr(const struct crt_cb_info *cb_info)
 				 * that any pointers contained therein belong
 				 * solely to parent.
 				 */
-				memcpy(parent_rpc_priv->crp_pub.cr_output,
-				       child_rpc_priv->crp_pub.cr_output,
-				       parent_rpc_priv->crp_pub.cr_output_size);
-				memset(child_rpc_priv->crp_pub.cr_output, 0,
-				       child_rpc_priv->crp_pub.cr_output_size);
+				D_MEMCPY(parent_rpc_priv->crp_pub.cr_output,
+					 child_rpc_priv->crp_pub.cr_output,
+					 parent_rpc_priv->crp_pub.cr_output_size);
+				D_MEMSET(child_rpc_priv->crp_pub.cr_output, 0,
+					 child_rpc_priv->crp_pub.cr_output_size);
 			} else {
 				D_ASSERT(co_ops->co_aggregate != NULL);
 				rc = co_ops->co_aggregate(child_req,

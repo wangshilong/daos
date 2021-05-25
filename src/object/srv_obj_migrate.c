@@ -136,8 +136,8 @@ tree_cache_create_internal(daos_handle_t toh, unsigned int tree_class,
 			   d_iov_t *key_iov, struct tree_cache_root **rootp)
 {
 	d_iov_t			val_iov;
-	struct umem_attr	uma;
-	struct tree_cache_root	root;
+	struct umem_attr	uma = {0};
+	struct tree_cache_root	root = {0};
 	struct btr_root		*broot;
 	int			rc;
 
@@ -145,9 +145,7 @@ tree_cache_create_internal(daos_handle_t toh, unsigned int tree_class,
 	if (broot == NULL)
 		return -DER_NOMEM;
 
-	memset(&root, 0, sizeof(root));
 	root.root_hdl = DAOS_HDL_INVAL;
-	memset(&uma, 0, sizeof(uma));
 	uma.uma_id = UMEM_CLASS_VMEM;
 
 	rc = dbtree_create_inplace(tree_class, BTR_FEAT_DIRECT_KEY, 32,
@@ -2140,9 +2138,9 @@ static int
 migrate_one_epoch_object(daos_epoch_range_t *epr, struct migrate_pool_tls *tls,
 			 struct iter_obj_arg *arg)
 {
-	daos_anchor_t		 anchor;
-	daos_anchor_t		 dkey_anchor;
-	daos_anchor_t		 akey_anchor;
+	daos_anchor_t		 anchor = {0};
+	daos_anchor_t		 dkey_anchor = {0};
+	daos_anchor_t		 akey_anchor = {0};
 	char			 stack_buf[ITER_BUF_SIZE] = {0};
 	char			*buf = NULL;
 	daos_size_t		 buf_len;
@@ -2182,10 +2180,7 @@ migrate_one_epoch_object(daos_epoch_range_t *epr, struct migrate_pool_tls *tls,
 		D_GOTO(out_cont, rc);
 	}
 
-	memset(&anchor, 0, sizeof(anchor));
-	memset(&dkey_anchor, 0, sizeof(dkey_anchor));
 	dc_obj_shard2anchor(&dkey_anchor, arg->shard);
-	memset(&akey_anchor, 0, sizeof(akey_anchor));
 	unpack_arg.arg = arg;
 	unpack_arg.epr = *epr;
 	D_INIT_LIST_HEAD(&unpack_arg.merge_list);
@@ -2194,8 +2189,8 @@ migrate_one_epoch_object(daos_epoch_range_t *epr, struct migrate_pool_tls *tls,
 
 	d_iov_set(&csum, stack_csum_buf, CSUM_BUF_SIZE);
 	while (!tls->mpt_fini) {
-		memset(buf, 0, buf_len);
-		memset(kds, 0, KDS_NUM * sizeof(*kds));
+		D_MEMSET(buf, 0, buf_len);
+		D_MEMSET(kds, 0, KDS_NUM * sizeof(*kds));
 		iov.iov_len = 0;
 		iov.iov_buf = buf;
 		iov.iov_buf_len = buf_len;
@@ -2587,8 +2582,8 @@ migrate_one_object(daos_unit_oid_t oid, daos_epoch_t eph, unsigned int shard,
 			D_GOTO(free, rc = -DER_NOMEM);
 
 		obj_arg->snap_cnt = cont_arg->snap_cnt;
-		memcpy(obj_arg->snaps, cont_arg->snaps,
-		       sizeof(*obj_arg->snaps) * cont_arg->snap_cnt);
+		D_MEMCPY(obj_arg->snaps, cont_arg->snaps,
+			 sizeof(*obj_arg->snaps) * cont_arg->snap_cnt);
 	}
 
 	if (cont_arg->pool_tls->mpt_del_local_objs) {
@@ -2840,12 +2835,11 @@ migrate_ult(void *arg)
 static int
 migrate_del_object_tree(struct migrate_pool_tls *tls)
 {
-	struct umem_attr uma;
+	struct umem_attr uma = {0};
 	int rc;
 
 	if (daos_handle_is_inval(tls->mpt_root_hdl)) {
 		/* migrate tree root init */
-		memset(&uma, 0, sizeof(uma));
 		uma.uma_id = UMEM_CLASS_VMEM;
 		rc = dbtree_create_inplace(DBTREE_CLASS_UV, 0, 4, &uma,
 					   &tls->mpt_root,
@@ -2858,7 +2852,6 @@ migrate_del_object_tree(struct migrate_pool_tls *tls)
 
 	if (daos_handle_is_inval(tls->mpt_migrated_root_hdl)) {
 		/* migrate tree root init */
-		memset(&uma, 0, sizeof(uma));
 		uma.uma_id = UMEM_CLASS_VMEM;
 		rc = dbtree_create_inplace(DBTREE_CLASS_UV, 0, 4, &uma,
 					   &tls->mpt_migrated_root,

@@ -324,8 +324,8 @@ cont_child_aggregate(struct ds_cont_child *cont, cont_aggregate_cb_t agg_cb,
 		 */
 		snapshots_nr = cont->sc_snapshots_nr;
 		if (snapshots_nr > 0)
-			memcpy(snapshots, cont->sc_snapshots,
-					snapshots_nr * sizeof(daos_epoch_t));
+			D_MEMCPY(snapshots, cont->sc_snapshots,
+				 snapshots_nr * sizeof(daos_epoch_t));
 	}
 
 	/* Find highest snapshot less than last aggregated epoch. */
@@ -1794,7 +1794,7 @@ ds_cont_query_stream_alloc(struct dss_stream_arg_type *args,
 	D_ALLOC(args->st_arg, sizeof(struct xstream_cont_query));
 	if (args->st_arg == NULL)
 		return -DER_NOMEM;
-	memcpy(args->st_arg, rarg, sizeof(struct xstream_cont_query));
+	D_MEMCPY(args->st_arg, rarg, sizeof(struct xstream_cont_query));
 
 	return 0;
 }
@@ -1889,8 +1889,8 @@ cont_snap_update_one(void *vin)
 			rc = -DER_NOMEM;
 			goto out_cont;
 		}
-		memcpy(snaps, args->snapshots,
-			args->snap_count * sizeof(*args->snapshots));
+		D_MEMCPY(snaps, args->snapshots,
+			 args->snap_count * sizeof(*args->snapshots));
 		cont->sc_snapshots = snaps;
 	}
 
@@ -2072,7 +2072,7 @@ int
 ds_cont_iter(daos_handle_t ph, uuid_t co_uuid, cont_iter_cb_t callback,
 	     void *arg, uint32_t type, uint32_t flags)
 {
-	vos_iter_param_t param;
+	vos_iter_param_t param = {0};
 	daos_handle_t	 iter_h;
 	daos_handle_t	 coh;
 	int		 rc;
@@ -2084,7 +2084,6 @@ ds_cont_iter(daos_handle_t ph, uuid_t co_uuid, cont_iter_cb_t callback,
 		return rc;
 	}
 
-	memset(&param, 0, sizeof(param));
 	param.ip_hdl = coh;
 	param.ip_epr.epr_lo = 0;
 	param.ip_epr.epr_hi = DAOS_EPOCH_MAX;

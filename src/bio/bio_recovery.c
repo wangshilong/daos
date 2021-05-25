@@ -419,7 +419,7 @@ bio_bs_state_set(struct bio_blobstore *bbs, enum bio_bs_state new_state)
 			uuid_t			dev_id;
 
 			bstype = spdk_bs_get_bstype(bbs->bb_bs);
-			memcpy(dev_id, bstype.bstype, sizeof(dev_id));
+			D_MEMCPY(dev_id, bstype.bstype, sizeof(dev_id));
 
 			rc = smd_dev_set_state(dev_id, SMD_DEV_FAULTY);
 			if (rc)

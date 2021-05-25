@@ -55,8 +55,8 @@ snap_list_iter_cb(daos_handle_t ih, d_iov_t *key, d_iov_t *val,
 		}
 
 		if (i_args->sla_index < i_args->sla_count)
-			memcpy(&i_args->sla_buf[i_args->sla_index],
-			       key->iov_buf, sizeof(daos_epoch_t));
+			D_MEMCPY(&i_args->sla_buf[i_args->sla_index],
+				 key->iov_buf, sizeof(daos_epoch_t));
 	}
 	++i_args->sla_index;
 	return 0;
