@@ -227,10 +227,11 @@ cc_verify_orig_extents(struct csum_context *ctx)
 
 	for (v = 0; v < to_verify_nr; v++) {
 		C_TRACE("(CALC) Verifying original extent\n");
-		uint8_t			 csum[csum_len] = {0};
+		uint8_t			 csum[csum_len];
 		bool			 match;
 		struct to_verify	*verify;
 
+		D_MEMSET(csum, 0, csum_len);
 		daos_csummer_set_buffer(csummer, csum, csum_len);
 		daos_csummer_reset(csummer);
 		verify = &to_verify[v];
