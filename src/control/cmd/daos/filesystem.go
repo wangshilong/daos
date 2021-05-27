@@ -14,11 +14,18 @@ package main
 import "C"
 
 import (
+	"os"
+
 	"github.com/pkg/errors"
 )
 
 type fsCmd struct {
-	Copy fsCopyCmd `command:"copy" description:"copy to and from a POSIX filesystem"`
+	Copy           fsCopyCmd `command:"copy" description:"copy to and from a POSIX filesystem"`
+	SetAttr        fsAttrCmd `command:"set-attr" description:"set fs attributes"`
+	GetAttr        fsAttrCmd `command:"get-attr" description:"get fs attributes"`
+	ResetAttr      fsAttrCmd `command:"reset-attr" description:"reset fs attributes"`
+	ResetChunkSize fsAttrCmd `command:"reset-chunk-size" description:"reset fs chunk size"`
+	ResetObjClass  fsAttrCmd `command:"reset-oclass" description:"reset fs obj class"`
 }
 
 type fsCopyCmd struct {
@@ -46,6 +53,58 @@ func (cmd *fsCopyCmd) Execute(_ []string) error {
 		return errors.Wrapf(err,
 			"failed to copy %s -> %s",
 			cmd.Source, cmd.Dest)
+	}
+
+	return nil
+}
+
+type fsAttrCmd struct {
+	existingContainerCmd
+
+	ChunkSize   chunkSize   `long:"chunk-size" short:"z" description:"container chunk size"`
+	ObjectClass objectClass `long:"oclass" short:"o" description:"default object class"`
+}
+
+func (cmd *fsAttrCmd) Execute(_ []string) error {
+	ap, deallocCmdArgs, err := allocCmdArgs(cmd.log)
+	if err != nil {
+		return err
+	}
+	defer deallocCmdArgs()
+
+	cleanup, err := cmd.resolveAndConnect(ap)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	op := os.Args[2]
+	switch op {
+	case "set-attr":
+		ap.fs_op = C.FS_SET_ATTR
+	case "get-attr":
+		ap.fs_op = C.FS_GET_ATTR
+	case "reset-attr":
+		ap.fs_op = C.FS_RESET_ATTR
+	case "reset-chunk-size":
+		ap.fs_op = C.FS_RESET_CHUNK_SIZE
+		if !cmd.ChunkSize.set {
+			return errors.New("--chunk-size not set")
+		}
+		ap.chunk_size = cmd.ChunkSize.size
+	case "reset-oclass":
+		ap.fs_op = C.FS_RESET_OCLASS
+		if !cmd.ObjectClass.set {
+			return errors.New("--oclass not set")
+		}
+		ap.oclass = cmd.ObjectClass.class
+	default:
+		return errors.Errorf("unknown fs op %q", op)
+	}
+
+	rc := C.fs_dfs_hdlr(ap)
+	if err := daosError(rc); err != nil {
+		return err
 	}
 
 	return nil
