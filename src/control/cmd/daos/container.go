@@ -122,9 +122,9 @@ type containerCreateCmd struct {
 }
 
 func (cmd *containerCreateCmd) Execute(_ []string) (err error) {
-	if err = cmd.resolvePool(cmd.PoolID()); err != nil {
-		return
-	}
+	//if err = cmd.resolvePool(cmd.PoolID()); err != nil {
+	//	return
+	//}
 
 	if cmd.UUID != "" {
 		cmd.contUUID, err = uuid.Parse(cmd.UUID)

@@ -57,19 +57,19 @@ func (cmd *poolBaseCmd) PoolID() PoolID {
 	return cmd.Args.Pool
 }
 
-func (cmd *poolBaseCmd) resolvePool(id PoolID) error {
-	// TODO: Resolve label.
-	if id.HasLabel() {
-		return errors.New("no support for pool labels yet")
-	}
-
-	if !id.HasUUID() {
-		return errors.New("no pool UUID provided")
-	}
-	cmd.poolUUID = id.UUID
-
-	return nil
-}
+//func (cmd *poolBaseCmd) resolvePool(id PoolID) error {
+//	// TODO: Resolve label.
+//	if id.HasLabel() {
+//		return errors.New("no support for pool labels yet")
+//	}
+//
+//	if !id.HasUUID() {
+//		return errors.New("no pool UUID provided")
+//	}
+//	cmd.poolUUID = id.UUID
+//
+//	return nil
+//}
 
 func (cmd *poolBaseCmd) connectPool() error {
 	sysName := cmd.SysName
@@ -79,9 +79,23 @@ func (cmd *poolBaseCmd) connectPool() error {
 
 	cSysName := C.CString(sysName)
 	defer freeString(cSysName)
-	rc := C.daos_pool_connect(cmd.poolUUIDPtr(), cSysName,
-		C.DAOS_PC_RW, &cmd.cPoolHandle, nil, nil)
-	return daosError(rc)
+
+	if cmd.PoolID().HasLabel() {
+		// TODO (?): supply a daos_pool_info_t output arg (to get UUID)
+		cLabel := C.CString(cmd.PoolID().Label)
+		defer freeString(cLabel)
+		rc := C.daos_pool_connect_by_label(cLabel, cSysName,
+			C.DAOS_PC_RW, &cmd.cPoolHandle, nil, nil)
+		return daosError(rc)
+	} else {
+		if !cmd.PoolID().HasUUID() {
+			return errors.New("no pool UUID provided")
+		}
+		cmd.poolUUID = cmd.PoolID().UUID
+		rc := C.daos_pool_connect(cmd.poolUUIDPtr(), cSysName,
+			C.DAOS_PC_RW, &cmd.cPoolHandle, nil, nil)
+		return daosError(rc)
+	}
 }
 
 func (cmd *poolBaseCmd) disconnectPool() {
@@ -93,12 +107,12 @@ func (cmd *poolBaseCmd) disconnectPool() {
 }
 
 func (cmd *poolBaseCmd) resolveAndConnect(ap *C.struct_cmd_args_s) (func(), error) {
-	if cmd.poolUUID == uuid.Nil {
-		if err := cmd.resolvePool(cmd.PoolID()); err != nil {
-			return nil, errors.Wrapf(err,
-				"failed to resolve pool ID %q", cmd.PoolID())
-		}
-	}
+	//if cmd.poolUUID == uuid.Nil {
+	//	if err := cmd.resolvePool(cmd.PoolID()); err != nil {
+	//		return nil, errors.Wrapf(err,
+	//			"failed to resolve pool ID %q", cmd.PoolID())
+	//	}
+	//}
 
 	if err := cmd.connectPool(); err != nil {
 		return nil, errors.Wrapf(err,
