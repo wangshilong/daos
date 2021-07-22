@@ -14,7 +14,7 @@
 
 Name:          daos
 Version:       1.3.103
-Release:       3%{?relval}%{?dist}
+Release:       4%{?relval}%{?dist}
 Summary:       DAOS Storage Engine
 
 License:       BSD-2-Clause-Patent
@@ -460,9 +460,12 @@ getent passwd daos_agent >/dev/null || useradd -s /sbin/nologin -r -g daos_agent
 %attr(4750,root,daos_server) %{_bindir}/daos_firmware
 
 %changelog
-* Thu July 22 2021 Christopher Hoffman <christopherx.hoffman@intel.com> 1.3.103-4
+* Thu July 22 2021 Christopher Hoffman <christopherx.hoffman@intel.com> 1.3.103-5
 - Update conditional statement to include checking for rhel 8 and leap 15 to
   determine which unit files to use for daos-server and daos-agent
+
+* Wed Jul 14 2021 Li Wei <wei.g.li@intel.com> 1.3.103-4
+- Update raft to fix slow leader re-elections
 
 * Tue Jul 13 2021  Maureen Jean <maureen.jean@intel.com> 1.3.103-3
 - Add python modules to python3.6 site-packages

@@ -167,13 +167,10 @@ class WarningsFactory():
             # and keep it there, until close() method is called, then remove
             # it and re-save.  This means any crash will result in there
             # being a results file with an error recorded.
-            tc = junit_xml.TestCase('Sanity',
-                                    classname=self._class_name('core'))
+            tc = junit_xml.TestCase('Sanity', classname=self._class_name('core'))
             tc.add_error_info('NLT exited abnormally')
-            test_case = junit_xml.TestCase('Startup',
-                                           classname=self._class_name('core'))
-            self.ts = junit_xml.TestSuite('Node Local Testing',
-                                          test_cases=[test_case, tc])
+            test_case = junit_xml.TestCase('Startup', classname=self._class_name('core'))
+            self.ts = junit_xml.TestSuite('Node Local Testing', test_cases=[test_case, tc])
             self._write_test_file()
         else:
             self.ts = None
@@ -565,7 +562,8 @@ class DaosServer():
             scyaml['engines'][0]['env_vars'].append('{}={}'.format(key, value))
 
         ref_engine = copy.deepcopy(scyaml['engines'][0])
-        ref_engine['scm_size'] = int(ref_engine['scm_size'] / self.engines)
+        ref_engine['storage'][0]['scm_size'] = int(
+            ref_engine['storage'][0]['scm_size'] / self.engines)
         scyaml['engines'] = []
         server_port_count = int(server_env['FI_UNIVERSE_SIZE'])
         for idx in range(self.engines):
@@ -573,7 +571,8 @@ class DaosServer():
             engine['log_file'] = self.server_logs[idx].name
             engine['first_core'] = ref_engine['targets'] * idx
             engine['fabric_iface_port'] += server_port_count * idx
-            engine['scm_mount'] = '{}_{}'.format(ref_engine['scm_mount'], idx)
+            engine['storage'][0]['scm_mount'] = '{}_{}'.format(
+                ref_engine['storage'][0]['scm_mount'], idx)
             scyaml['engines'].append(engine)
         self._yaml_file = tempfile.NamedTemporaryFile(
             prefix='nlt-server-config-',
@@ -718,7 +717,7 @@ class DaosServer():
             msg = 'dmg system stop failed with {}'.format(rc.returncode)
             entry['message'] = msg
             self.conf.wf.issues.append(entry)
-        assert rc.returncode == 0
+        assert rc.returncode == 0, rc
 
         start = time.time()
         max_stop_time = 30
@@ -946,7 +945,6 @@ class DFuse():
             self.dir = os.path.join(conf.dfuse_parent_dir, 'dfuse_mount')
         self.pool = pool
         self.uns_path = uns_path
-        self.valgrind_file = None
         self.container = container
         self.conf = conf
         # Detect the number of cores and do something sensible, if there are
@@ -1334,6 +1332,8 @@ def needs_dfuse_with_cache(method):
         return rc
     return _helper
 
+# This is test code where methods are tests, so we want to have lots of them.
+# pylint: disable=too-many-public-methods
 class posix_tests():
     """Class for adding standalone unit tests"""
 
@@ -1511,12 +1511,7 @@ class posix_tests():
         nfd.close()
         print(os.fstat(ofd.fileno()))
         os.rename(newfile, fname)
-        # This should fail, because the file has been deleted.
-        try:
-            print(os.fstat(ofd.fileno()))
-            self.fail()
-        except FileNotFoundError:
-            print('Failed to fstat() replaced file')
+        print(os.fstat(ofd.fileno()))
         ofd.close()
 
     @needs_dfuse
@@ -1528,12 +1523,7 @@ class posix_tests():
         pre = os.fstat(ofd.fileno())
         print(pre)
         os.rename(fname, newfile)
-        try:
-            post = os.fstat(ofd.fileno())
-            print(post)
-            self.fail()
-        except FileNotFoundError:
-            print('Failed to fstat() renamed file')
+        print(os.fstat(ofd.fileno()))
         os.stat(newfile)
         post = os.fstat(ofd.fileno())
         print(post)
@@ -1547,20 +1537,8 @@ class posix_tests():
         ofd = open(fname, 'w')
         print(os.fstat(ofd.fileno()))
         os.unlink(fname)
-        try:
-            print(os.fstat(ofd.fileno()))
-            self.fail()
-        except FileNotFoundError:
-            print('Failed to fstat() unlinked file')
-        # With wb caching enabled the kernel will do a setattr to set the times
-        # on close, so with caching enabled catch that and ignore it.
-        if self.dfuse.caching:
-            try:
-                ofd.close()
-            except FileNotFoundError:
-                pass
-        else:
-            ofd.close()
+        print(os.fstat(ofd.fileno()))
+        ofd.close()
 
     @needs_dfuse
     def test_symlink_broken(self):
@@ -1696,6 +1674,151 @@ class posix_tests():
         print(stbuf)
         assert stbuf.st_ino < 100
         print(os.listdir(path))
+
+    @needs_dfuse
+    def test_rename(self):
+        """Test that rename clobbers files correctly
+
+        use rename to delete a file, but where the kernel is aware of a different file.
+        Create a filename to be clobbered and stat it.
+        Create a file to copy over.
+        Start a second dfuse instance and overwrite the original file with a new name.
+        Perform a rename on the first dfuse.
+
+        This should clobber a file, but not the one that the kernel is expecting, although it will
+        do a lookup of the destination filename before the rename.
+
+        Inspection of the logs is required to verify what is happening here which is beyond the
+        scope of this test, however this does execute the code-paths and ensures that all refs
+        are correctly updated.
+
+        """
+
+        # Create all three files in the dfuse instance we're checking.
+        for index in range(3):
+            fd = open(os.path.join(self.dfuse.dir, 'file.{}'.format(index)), 'w')
+            fd.write('test')
+            fd.close()
+
+        # Start another dfuse instance to move the files around without the kernel knowing.
+        dfuse = DFuse(self.server,
+                      self.conf,
+                      pool=self.pool.id(),
+                      container=self.container,
+                      caching=False,
+                      mount_path=os.path.join(self.conf.dfuse_parent_dir, 'dfuse_mount_backend'))
+        dfuse.start(v_hint='rename_other')
+
+        print(os.listdir(self.dfuse.dir))
+        print(os.listdir(dfuse.dir))
+
+        # Rename file 1 to file 2 in the background, this will remove file 2
+        os.rename(os.path.join(dfuse.dir, 'file.1') ,os.path.join(dfuse.dir, 'file.2'))
+
+        # Rename file 0 to file 2 in the test dfuse.  Here the kernel thinks it's clobbering
+        # file 2 but it's really clobbering file 1, although it will stat() file 2 before the
+        # operation so may have the correct data.
+        # Dfuse should return file 1 for the details of what has been deleted.
+        os.rename(os.path.join(self.dfuse.dir, 'file.0') ,os.path.join(self.dfuse.dir, 'file.2'))
+
+        if dfuse.stop():
+            self.fatal_errors = True
+
+        # Finally, perform some more I/O so we can tell from the dfuse logs where the test ends and
+        # dfuse teardown starts.  At this point file 1 and file 2 have been deleted.
+        time.sleep(1)
+        print(os.statvfs(self.dfuse.dir))
+
+    @needs_dfuse
+    def test_complex_unlink(self):
+        """Test that unlink clears file data correctly.
+
+        Create two files, exchange them in the backend then unlink the one.
+
+        The kernel will be unlinking what it thinks is file 1 but it will actually be file 0.
+        """
+
+        fds = []
+
+        # Create both files in the dfuse instance we're checking.  These files are created in
+        # binary mode with buffering off so the writes are sent direct to the kernel.
+        for index in range(2):
+            fd = open(os.path.join(self.dfuse.dir, 'file.{}'.format(index)), 'wb', buffering=0)
+            fd.write(b'test')
+            fds.append(fd)
+
+        # Start another dfuse instance to move the files around without the kernel knowing.
+        dfuse = DFuse(self.server,
+                      self.conf,
+                      pool=self.pool.id(),
+                      container=self.container,
+                      caching=False,
+                      mount_path=os.path.join(self.conf.dfuse_parent_dir, 'dfuse_mount_backend'))
+        dfuse.start(v_hint='unlink')
+
+        print(os.listdir(self.dfuse.dir))
+        print(os.listdir(dfuse.dir))
+
+        # Rename file 0 to file 0 in the background, this will remove file 1
+        os.rename(os.path.join(dfuse.dir, 'file.0') ,os.path.join(dfuse.dir, 'file.1'))
+
+        # Perform the unlink, this will unlink the other file.
+        os.unlink(os.path.join(self.dfuse.dir, 'file.1'))
+
+        if dfuse.stop():
+            self.fatal_errors = True
+
+        # Finally, perform some more I/O so we can tell from the dfuse logs where the test ends and
+        # dfuse teardown starts.  At this point file 1 and file 2 have been deleted.
+        time.sleep(1)
+        print(os.statvfs(self.dfuse.dir))
+
+        for fd in fds:
+            fd.close()
+
+    @needs_dfuse
+    def test_complex_rename(self):
+        """Test for rename semantics, and that rename is correctly updating the dfuse data for
+        the moved rile.
+
+        # Create a file, read/write to it.
+        # Check fstat works.
+        # Rename it from the backend
+        # Check fstat - it should not work.
+        # Rename the file into a new directory, this should allow the kernel to 'find' the file
+        # again and update the name/parent.
+        # check fstat works.
+        """
+
+        fname = os.path.join(self.dfuse.dir, 'file')
+        ofd = open(fname, 'w')
+        print(os.fstat(ofd.fileno()))
+
+        dfuse = DFuse(self.server,
+                      self.conf,
+                      pool=self.pool.id(),
+                      container=self.container,
+                      caching=False,
+                      mount_path=os.path.join(self.conf.dfuse_parent_dir, 'dfuse_mount_backend'))
+        dfuse.start(v_hint='rename')
+
+        os.mkdir(os.path.join(dfuse.dir, 'step_dir'))
+        os.mkdir(os.path.join(dfuse.dir, 'new_dir'))
+        os.rename(os.path.join(dfuse.dir, 'file'), os.path.join(dfuse.dir, 'step_dir', 'file-new'))
+
+        # This should fail, because the file has been deleted.
+        try:
+            print(os.fstat(ofd.fileno()))
+            self.fail()
+        except FileNotFoundError:
+            print('Failed to fstat() replaced file')
+
+        os.rename(os.path.join(self.dfuse.dir, 'step_dir', 'file-new'),
+                  os.path.join(self.dfuse.dir, 'new_dir', 'my-file'))
+
+        print(os.fstat(ofd.fileno()))
+
+        ofd.close()
 
     def test_with_path(self):
         """Test that dfuse starts with path option."""
@@ -1992,6 +2115,7 @@ class posix_tests():
         print(rc)
         assert rc.returncode == 0
         destroy_container(self.conf, self.pool.id(), container)
+# pylint: enable=too-many-public-methods
 
 def run_posix_tests(server, conf, test=None):
     """Run one or all posix tests
@@ -2850,11 +2974,17 @@ class AllocFailTestRun():
         res = "Fault injection test of '{}'\n".format(' '.join(self.cmd))
         res += 'Fault injection location {}\n'.format(self.loc)
         if self.vh:
-            res += 'Valgrind enabled for this test'
+            res += 'Valgrind enabled for this test\n'
         if self.returncode is None:
             res += 'Process not completed'
         else:
             res += 'Returncode was {}'.format(self.returncode)
+
+        if self.stdout:
+            res += '\nSTDOUT:{}'.format(self.stdout.decode('utf-8').strip())
+
+        if self.stderr:
+            res += '\nSTDERR:{}'.format(self.stderr.decode('utf-8').strip())
         return res
 
     def start(self):
@@ -2915,10 +3045,6 @@ class AllocFailTestRun():
         self.stdout = self._sp.stdout.read()
         self.stderr = self._sp.stderr.read()
 
-        if self.stderr != b'':
-            print('Stderr from command')
-            print(self.stderr.decode('utf-8').strip())
-
         show_memleaks = True
 
         fi_signal = None
@@ -2942,7 +3068,7 @@ class AllocFailTestRun():
             # If a fault wasn't injected then check output is as expected.
             # It's not possible to log these as warnings, because there is
             # no src line to log them against, so simply assert.
-            assert self.returncode == 0
+            assert self.returncode == 0, self
 
             if self.aft.check_post_stdout:
                 assert self.stderr == b''
@@ -3179,51 +3305,12 @@ def test_alloc_fail(server, conf):
     destroy_container(conf, pool, container)
     return rc
 
-def main():
+def run(wf, args):
     """Main entry point"""
-
-    parser = argparse.ArgumentParser(
-        description='Run DAOS client on local node')
-    parser.add_argument('--server-debug', default=None)
-    parser.add_argument('--dfuse-debug', default=None)
-    parser.add_argument('--class-name', default=None,
-                        help='class name to use for junit')
-    parser.add_argument('--memcheck', default='some',
-                        choices=['yes', 'no', 'some'])
-    parser.add_argument('--no-root', action='store_true')
-    parser.add_argument('--max-log-size', default=None)
-    parser.add_argument('--engine-count', type=int, default=1,
-                        help='Number of daos engines to run')
-    parser.add_argument('--dfuse-dir', default='/tmp',
-                        help='parent directory for all dfuse mounts')
-    parser.add_argument('--perf-check', action='store_true')
-    parser.add_argument('--dtx', action='store_true')
-    parser.add_argument('--test', help="Use '--test list' for list")
-    parser.add_argument('mode', nargs='?')
-    args = parser.parse_args()
-
-    if args.mode and args.test:
-        print('Cannot use mode and test')
-        sys.exit(1)
-
-    if args.test == 'list':
-        tests = []
-        for fn in dir(posix_tests):
-            if fn.startswith('test'):
-                tests.append(fn[5:])
-        print('Tests are: {}'.format(','.join(sorted(tests))))
-        return
 
     conf = load_conf(args)
 
-    wf = WarningsFactory('nlt-errors.json',
-                         post_error=True,
-                         check='Log file errors',
-                         junit=True,
-                         class_id=args.class_name)
-
-    wf_server = WarningsFactory('nlt-server-leaks.json',
-                                post=True, check='Server leak checking')
+    wf_server = WarningsFactory('nlt-server-leaks.json', post=True, check='Server leak checking')
     wf_client = WarningsFactory('nlt-client-leaks.json')
 
     conf.set_wf(wf)
@@ -3317,9 +3404,63 @@ def main():
         print("Valgrind errors detected during execution")
         fatal_errors.add_result(True)
 
-    wf.close()
     wf_server.close()
     wf_client.close()
+    return fatal_errors
+
+def main():
+    """Wrap the core function, and catch/report any exceptions
+
+    This allows the junit results to show at least a stack trace and assertion message for
+    any failure, regardless of if it's from a test case or not.
+    """
+
+    parser = argparse.ArgumentParser(description='Run DAOS client on local node')
+    parser.add_argument('--server-debug', default=None)
+    parser.add_argument('--dfuse-debug', default=None)
+    parser.add_argument('--class-name', default=None, help='class name to use for junit')
+    parser.add_argument('--memcheck', default='some', choices=['yes', 'no', 'some'])
+    parser.add_argument('--no-root', action='store_true')
+    parser.add_argument('--max-log-size', default=None)
+    parser.add_argument('--engine-count', type=int, default=1, help='Number of daos engines to run')
+    parser.add_argument('--dfuse-dir', default='/tmp', help='parent directory for all dfuse mounts')
+    parser.add_argument('--perf-check', action='store_true')
+    parser.add_argument('--dtx', action='store_true')
+    parser.add_argument('--test', help="Use '--test list' for list")
+    parser.add_argument('mode', nargs='?')
+    args = parser.parse_args()
+
+    if args.mode and args.test:
+        print('Cannot use mode and test')
+        sys.exit(1)
+
+    if args.test == 'list':
+        tests = []
+        for fn in dir(posix_tests):
+            if fn.startswith('test'):
+                tests.append(fn[5:])
+        print('Tests are: {}'.format(','.join(sorted(tests))))
+        sys.exit(1)
+
+    wf = WarningsFactory('nlt-errors.json',
+                         post_error=True,
+                         check='Log file errors',
+                         class_id=args.class_name,
+                         junit=True)
+
+    try:
+        fatal_errors = run(wf, args)
+        wf.add_test_case('exit_wrapper')
+        wf.close()
+    except Exception as error:
+        print(error)
+        print(str(error))
+        print(repr(error))
+        trace = ''.join(traceback.format_tb(error.__traceback__))
+        wf.add_test_case('exit_wrapper', str(error), output=trace)
+        wf.close()
+        raise
+
     if fatal_errors.errors:
         print("Significant errors encountered")
         sys.exit(1)
