@@ -1548,6 +1548,29 @@ d_tm_set_counter(struct d_tm_node_t *metric, uint64_t value)
 }
 
 /**
+ * Server function to read the specified counter.
+ *
+ * \param[in]	metric	Pointer to the metric
+ * \param[out]	value	The value of the counter is stored here
+ */
+void
+d_tm_get_counter_srv(struct d_tm_node_t *metric, uint64_t *value)
+{
+	if (unlikely(metric == NULL))
+		return;
+
+	if (unlikely(metric->dtn_type != D_TM_COUNTER)) {
+		D_ERROR("Failed to get counter [%s] on item not a counter.\n",
+			metric->dtn_name);
+		return;
+	}
+
+	d_tm_node_lock(metric);
+	*value = metric->dtn_metric->dtm_data.value;
+	d_tm_node_unlock(metric);
+}
+
+/**
  * Increment the given counter by the specified \a value
  *
  * \param[in]	metric	Pointer to the metric

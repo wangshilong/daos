@@ -23,6 +23,7 @@ class TelemetryUtils():
         "engine_pool_ops_dkey_enum",
         "engine_pool_ops_dkey_punch",
         "engine_pool_ops_dtx_abort",
+        "engine_pool_ops_dtx_batched",
         "engine_pool_ops_dtx_check",
         "engine_pool_ops_dtx_commit",
         "engine_pool_ops_dtx_refresh",

@@ -96,6 +96,7 @@ CRT_RPC_DECLARE(dtx, DAOS_ISEQ_DTX, DAOS_OSEQ_DTX);
 
 struct dtx_pool_metrics {
 	struct d_tm_node_t	*dpm_total[DTX_PROTO_SRV_RPC_COUNT];
+	struct d_tm_node_t	*dpm_batched;
 };
 
 /*
