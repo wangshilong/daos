@@ -80,7 +80,7 @@ pipeline {
                             'number of tests specified with the TestTag ' +
                             'parameter.')
         string(name: 'CI_HARDWARE_DISTRO',
-               defaultValue: 'centos7',
+               defaultValue: 'centos8',
                description: 'Distribution to use for CI Hardware Tests')
     }
 
