@@ -79,6 +79,9 @@ pipeline {
                             'CAUTION: only use in combination with a reduced ' +
                             'number of tests specified with the TestTag ' +
                             'parameter.')
+        string(name: 'CI_HARDWARE_DISTRO',
+               defaultValue: 'centos7',
+               description: 'Distribution to use for CI Hardware Tests')
     }
 
     stages {
@@ -901,7 +904,7 @@ pipeline {
                     }
                     agent {
                         // 8+ node cluster with 1 IB/node + 1 test control node
-                        label 'ci_nvme9'
+                        label 'wolf-51_nvme9'
                     }
                     steps {
                         functionalTest target: hwDistroTarget(),
