@@ -1141,6 +1141,8 @@ crt_ivf_rpc_issue(d_rank_t dest_node, crt_iv_key_t *iv_key,
 			IV_DBG(iv_key, "added to kip_entry=%p\n", entry);
 			D_MUTEX_UNLOCK(&entry->kip_lock);
 			D_MUTEX_UNLOCK(&ivns_internal->cii_lock);
+			if (rc == 0)
+				IVNS_DECREF(ivns_internal);
 			return rc;
 		}
 		IV_DBG(iv_key, "kip_entry=%p present\n", entry);

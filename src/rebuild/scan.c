@@ -157,6 +157,7 @@ rebuild_cont_send_cb(daos_handle_t ih, d_iov_t *key_iov,
 	}
 
 	rc = dbtree_destroy(root->root_hdl, NULL);
+	D_FREE_PTR(root->btr_root);
 	if (rc) {
 		D_ERROR("dbtree_destroy failed: "DF_RC"\n", DP_RC(rc));
 		return rc;
@@ -524,6 +525,7 @@ rebuild_obj_scan_cb(daos_handle_t ch, vos_iter_entry_t *ent,
 		still_needed = pl_obj_layout_contains(rpt->rt_pool->sp_map,
 						      layout, myrank, mytarget,
 						      oid.id_shard);
+		pl_obj_layout_free(layout);
 		if (!still_needed) {
 			struct rebuild_pool_tls *tls;
 

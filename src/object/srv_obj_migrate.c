@@ -109,7 +109,7 @@ obj_tree_destory_cb(daos_handle_t ih, d_iov_t *key_iov,
 	if (rc)
 		D_ERROR("dbtree_destroy, cont "DF_UUID" failed: "DF_RC"\n",
 			DP_UUID(*(uuid_t *)key_iov->iov_buf), DP_RC(rc));
-
+	D_FREE_PTR(root->btr_root);
 	return rc;
 }
 
@@ -148,6 +148,7 @@ tree_cache_create_internal(daos_handle_t toh, unsigned int tree_class,
 
 	memset(&root, 0, sizeof(root));
 	root.root_hdl = DAOS_HDL_INVAL;
+	root.btr_root = broot;
 	memset(&uma, 0, sizeof(uma));
 	uma.uma_id = UMEM_CLASS_VMEM;
 
@@ -155,7 +156,6 @@ tree_cache_create_internal(daos_handle_t toh, unsigned int tree_class,
 				   &uma, broot, &root.root_hdl);
 	if (rc) {
 		D_ERROR("failed to create rebuild tree: "DF_RC"\n", DP_RC(rc));
-		D_FREE(broot);
 		D_GOTO(out, rc);
 	}
 
@@ -171,9 +171,13 @@ tree_cache_create_internal(daos_handle_t toh, unsigned int tree_class,
 
 	*rootp = val_iov.iov_buf;
 	D_ASSERT(*rootp != NULL);
+
 out:
-	if (rc < 0 && daos_handle_is_valid(root.root_hdl))
-		dbtree_destroy(root.root_hdl, NULL);
+	if (rc < 0) {
+		if (daos_handle_is_valid(root.root_hdl))
+			dbtree_destroy(root.root_hdl, NULL);
+		D_FREE(broot);
+	}
 	return rc;
 }
 
@@ -2784,6 +2788,15 @@ migrate_cont_iter_cb(daos_handle_t ih, d_iov_t *key_iov,
 
 	D_DEBUG(DB_REBUILD, "iter cont "DF_UUID"/%"PRIx64" finish.\n",
 		DP_UUID(cont_uuid), ih.cookie);
+
+	rc = dbtree_destroy(root->root_hdl, NULL);
+	D_FREE_PTR(root->btr_root);
+	if (rc) {
+		/* Ignore the DRAM migrate object tree for the moment, since
+		 * it does not impact the migration on the storage anyway
+		 */
+		D_ERROR("dbtree_destroy failed: "DF_RC"\n", DP_RC(rc));
+	}
 
 	/* Snapshot fetch will yield the ULT, let's reprobe before delete  */
 	d_iov_set(&tmp_iov, cont_uuid, sizeof(uuid_t));

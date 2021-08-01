@@ -784,6 +784,7 @@ exit_debug_init:
 static void
 server_fini(bool force)
 {
+	crt_rank_abort_all(NULL);
 	D_INFO("Service is shutting down\n");
 	crt_unregister_event_cb(dss_crt_event_cb, NULL);
 	D_INFO("unregister event callbacks done\n");

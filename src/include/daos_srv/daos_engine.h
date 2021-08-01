@@ -812,7 +812,7 @@ unsigned int dss_ctx_nr_get(void);
 
 /* Cache for container root */
 struct tree_cache_root {
-	struct btr_root	btr_root;
+	struct btr_root	*btr_root;
 	daos_handle_t	root_hdl;
 	unsigned int	count;
 };
